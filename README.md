@@ -1,10 +1,11 @@
-Interactive raytracer, supporting .3ds, .ply (ascii) and .tri (binary) formats.
+*[Full blog post about this code is here (screenshots, history, etc)[http://users.softlab.ece.ntua.gr/~ttsiod/cudarenderer.html]*
 
-COMPILE/INSTALL/RUN
-===================
+This is a real-time raytracer, supporting .3ds, .ply (ascii) and .tri (binary) formats.
 
-Under Windows
--------------
+## COMPILE/INSTALL/RUN
+
+### Under Windows
+
 Make sure you have the CUDA toolkit installed (I used version 3.2).
 Then:
 
@@ -22,9 +23,7 @@ Read below for keyboard control intructions, or just press 'H' for help.
 Note: I used the free Visual C++ 2008 Express Edition, but this should work 
 with the commercial one, too.
 
-Under Linux
------------
-(Should also work on OS/X with minor changes)
+### Under Linux
 
 The code has 3 dependencies: You must have installed...
     - OpenGL (with GLEW and GLUT)
@@ -44,8 +43,7 @@ and installed it in /opt/cuda-3.2/). After this, a simple...
 
 ...will work.
 
-Keyboard controls
------------------
+## Keyboard controls
 
 Use the following keys to navigate around the object:
 
@@ -64,8 +62,8 @@ Use the following keys to navigate around the object:
 - F9 toggles anti-aliasing
 - ESC quits.
 
-MISC
-====
+## MISC
+
 Since it reports frame rate at the end, you can use this as a benchmark 
 for CUDA cards. Just spawn with "-b" to request benchmarking:
 (Note: keys don't work in benchmarking mode)
@@ -76,5 +74,3 @@ This will draw 150 frames and report speed back. With my GT240, it reports:
 
     Rendering 150 frames in 8.117 seconds. (18.4797 fps)
 
-Read my blog post about this code at: 
-http://users.softlab.ece.ntua.gr/~ttsiod/cudarenderer.html
