@@ -624,10 +624,10 @@ uninstall-am:
 
 
 cudarenderer.o:	cudarenderer.cu cudarenderer.h Types.h Base3d.h Camera.h
-	$(NVCC) -o $@ -c $< @NVCCFLAGS@ @SDL_CFLAGS@ @CUDA_CFLAGS@
+	$(AM_V_GEN)$(NVCC) -o $@ -c $< @NVCCFLAGS@ @SDL_CFLAGS@ @CUDA_CFLAGS@
 
 .cu.o:
-	$(NVCC) -o $@ -c $< @NVCCFLAGS@ @SDL_CFLAGS@ @CUDA_CFLAGS@
+	$(AM_V_GEN)$(NVCC) -o $@ -c $< @NVCCFLAGS@ @SDL_CFLAGS@ @CUDA_CFLAGS@
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

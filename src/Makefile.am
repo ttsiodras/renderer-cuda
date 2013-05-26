@@ -9,7 +9,7 @@ cudaRenderer_LDADD = @SDL_LIBS@ @CUDA_LIBS@ @SYS_GL_LIBS@ ../lib3ds-1.3.0/lib3ds
 LINK=$(CC) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 
 cudarenderer.o:	cudarenderer.cu cudarenderer.h Types.h Base3d.h Camera.h
-	$(NVCC) -o $@ -c $< @NVCCFLAGS@ @SDL_CFLAGS@ @CUDA_CFLAGS@
+	$(AM_V_GEN)$(NVCC) -o $@ -c $< @NVCCFLAGS@ @SDL_CFLAGS@ @CUDA_CFLAGS@
 
 .cu.o:
-	$(NVCC) -o $@ -c $< @NVCCFLAGS@ @SDL_CFLAGS@ @CUDA_CFLAGS@
+	$(AM_V_GEN)$(NVCC) -o $@ -c $< @NVCCFLAGS@ @SDL_CFLAGS@ @CUDA_CFLAGS@
