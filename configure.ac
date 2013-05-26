@@ -7,18 +7,18 @@ AC_CONFIG_MACRO_DIR([ac-macros])
 # Check for CUDA
 ########################
 AC_ARG_WITH([cuda],
-    [  --with-cuda=PATH        prefix where cuda is installed])
-if test "x$with_cuda" != x; then
-  CUDA_CFLAGS="-I$with_cuda/include"
-  CUDA_LIBS="-L$with_cuda/lib -lcudart"
-  NVCC="$with_cuda/bin/nvcc"
+    [  --with-cudaSDK=PATH        prefix where CUDA SDK is installed])
+if test "x$with_cudaSDK" != x; then
+  CUDA_CFLAGS="-I$with_cudaSDK/include"
+  CUDA_LIBS="-L$with_cudaSDK/lib -lcudart"
+  NVCC="$with_cudaSDK/bin/nvcc"
 else
   # Assume it is installed in global directories
   CUDA_CFLAGS=""
   CUDA_LIBS="-lcudart"
   NVCC="nvcc"
 fi
-NVCCFLAGS="-O2 -use_fast_math --compiler-options -fno-inline --compiler-options -fpermissive"
+NVCCFLAGS="-O2 -use_fast_math --compiler-options -fno-inline -I ."
 
 OLDCFLAGS="$CFLAGS"
 OLDCPPFLAGS="$CPPFLAGS"
@@ -80,39 +80,39 @@ else
 	# SIMD detection - core logic from mplayer
 
 	AC_MSG_CHECKING(for SSE)
-	AC_RUN_IFELSE([#include <stdlib.h>
+	AC_RUN_IFELSE([AC_LANG_SOURCE([#include <stdlib.h>
 #include <signal.h>
 void catchme(int) { exit(1); }
 int main(void) {
 signal(SIGILL, catchme);
 __asm__ volatile ("xorps %%xmm0, %%xmm0":::"memory"); return 0;
 }
-	], [HAVESSE=yes], [HAVESSE=no])
+	])], [HAVESSE=yes], [HAVESSE=no])
 	AC_MSG_RESULT($HAVESSE)
 	if test x"${HAVESSE}" = xyes ; then
 	    AC_DEFINE([SIMD_SSE], 1, [Define this to use SSE intrinsics.])
 	fi
 
 	AC_MSG_CHECKING(for SSE2)
-	AC_RUN_IFELSE([#include <stdlib.h>
+	AC_RUN_IFELSE([AC_LANG_SOURCE([#include <stdlib.h>
 #include <signal.h>
 void catchme(int) { exit(1); }
 int main(void) {
 signal(SIGILL, catchme);
 __asm__ volatile ("xorpd %%xmm0, %%xmm0":::"memory"); return 0;
 }
-	], [HAVESSE2=yes], [HAVESSE2=no])
+	])], [HAVESSE2=yes], [HAVESSE2=no])
 	AC_MSG_RESULT($HAVESSE2)
 
 	AC_MSG_CHECKING(for SSSE3)
-	AC_RUN_IFELSE([#include <stdlib.h>
+	AC_RUN_IFELSE([AC_LANG_SOURCE([#include <stdlib.h>
 #include <signal.h>
 void catchme(int) { exit(1); }
 int main(void) {
 signal(SIGILL, catchme);
 __asm__ volatile ("pabsd %%xmm0, %%xmm0":::"memory"); return 0;
 }
-	], [HAVESSSE3=yes], [HAVESSSE3=no])
+	])], [HAVESSSE3=yes], [HAVESSSE3=no])
 	AC_MSG_RESULT($HAVESSSE3)
 
 	if test x"${HAVESSE}" = xyes ; then

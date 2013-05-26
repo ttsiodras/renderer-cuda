@@ -26,6 +26,12 @@
 
 #include <vector_types.h>
 
+#ifdef CUDA_VERSION
+    #define ALSO_IN_CUDA __device__ __host__
+#else
+    #define ALSO_IN_CUDA
+#endif
+
 // The main floating point type, used everywhere
 typedef float coord;
 
@@ -38,17 +44,17 @@ struct Vector3
 	coord _v[3];
     };
 
-    Vector3(coord x=0, coord y=0, coord z=0)
+    ALSO_IN_CUDA Vector3(coord x=0, coord y=0, coord z=0)
 	:
 	_x(x), _y(y), _z(z) {}
 
-    Vector3(const Vector3& rhs)
+    ALSO_IN_CUDA Vector3(const Vector3& rhs)
 	:
 	_x(rhs._x),
 	_y(rhs._y),
 	_z(rhs._z) {}
 
-    Vector3(const float4& rhs)
+    ALSO_IN_CUDA Vector3(const float4& rhs)
 	:
 	_x(rhs.x),
 	_y(rhs.y),
@@ -63,27 +69,18 @@ struct Vector3
 	_mm_storeu_ps(&_x, _mm_mul_ps(tmp, _mm_rsqrt_ps(_mm_add_ps(l, _mm_shuffle_ps(l, l, 0x11)))));
 
  */
-#ifdef CUDA_VERSION
-    __device__ __host__ 
-#endif
-    inline coord length()
+    ALSO_IN_CUDA inline coord length()
     {
 	return sqrt(_x*_x +_y*_y + _z*_z);
     }
 
     // in some place, we dont need the sqrt, we are just comparing one length with another
-#ifdef CUDA_VERSION
-    __device__ __host__ 
-#endif
-    inline coord lengthsq()
+    ALSO_IN_CUDA inline coord lengthsq()
     {
 	return _x*_x +_y*_y + _z*_z;
     }
 
-#ifdef CUDA_VERSION
-    __device__ __host__ 
-#endif
-    inline void normalize()
+    ALSO_IN_CUDA inline void normalize()
     {
 	coord norm = sqrt(_x*_x +_y*_y + _z*_z);
 	_x /= norm;
@@ -91,37 +88,37 @@ struct Vector3
 	_z /= norm;
     }
 
-    Vector3& operator+=(const Vector3& rhs)
+    ALSO_IN_CUDA Vector3& operator+=(const Vector3& rhs)
     {
 	_x += rhs._x; _y += rhs._y; _z += rhs._z; return *this;
     }
 
-    Vector3& operator-=(const Vector3& rhs)
+    ALSO_IN_CUDA Vector3& operator-=(const Vector3& rhs)
     {
 	_x -= rhs._x; _y -= rhs._y; _z -= rhs._z; return *this;
     }
 
-    Vector3& operator*=(const coord& rhs)
+    ALSO_IN_CUDA Vector3& operator*=(const coord& rhs)
     {
 	_x *= rhs; _y *= rhs; _z *= rhs; return *this;
     }
 
-    inline Vector3 operator*(coord rhs) const
+    ALSO_IN_CUDA inline Vector3 operator*(coord rhs) const
     {
 	return Vector3(_x*rhs, _y*rhs, _z*rhs);
     }
 
-    inline Vector3 operator+(Vector3& rhs) const
+    ALSO_IN_CUDA inline Vector3 operator+(Vector3& rhs) const
     {
 	return Vector3(_x+rhs._x, _y+rhs._y, _z+rhs._z);
     }
 
-    Vector3& operator/=(const coord& rhs)
+    ALSO_IN_CUDA Vector3& operator/=(const coord& rhs)
     {
 	_x /= rhs; _y /= rhs; _z /= rhs; return *this;
     }
 
-    inline bool operator!=(const Vector3& rhs)
+    ALSO_IN_CUDA inline bool operator!=(const Vector3& rhs)
     {
 	return _x!=rhs._x || _y!=rhs._y || _z!=rhs._z;
     }
@@ -147,32 +144,34 @@ struct Pixel {
     float _b;
     float _g;
     float _r;
-    Pixel(float r=0.f, float g=0.f, float b=0.f)
+    ALSO_IN_CUDA Pixel(float r=0.f, float g=0.f, float b=0.f)
 	:
 	_b(b), _g(g), _r(r) {}
 
-    Pixel& operator+=(const Pixel& rhs) { _b += rhs._b; _g += rhs._g; _r += rhs._r; return *this; }
-    Pixel& operator-=(const Pixel& rhs) { _b -= rhs._b; _g -= rhs._g; _r -= rhs._r; return *this; }
-    Pixel& operator*=(const coord& rhs) {
+    ALSO_IN_CUDA Pixel& operator+=(const Pixel& rhs) { _b += rhs._b; _g += rhs._g; _r += rhs._r; return *this; }
+
+    ALSO_IN_CUDA Pixel& operator-=(const Pixel& rhs) { _b -= rhs._b; _g -= rhs._g; _r -= rhs._r; return *this; }
+
+    ALSO_IN_CUDA Pixel& operator*=(const coord& rhs) {
 	_b = rhs*_b;
 	_g = rhs*_g;
 	_r = rhs*_r;
 	return *this;
     }
-    Pixel& operator/=(const coord& rhs) {
+    ALSO_IN_CUDA Pixel& operator/=(const coord& rhs) {
 	_b = _b/rhs;
 	_g = _g/rhs;
 	_r = _r/rhs;
 	return *this;
     }
 
-    Pixel operator+(const Pixel& rhs) {
+    ALSO_IN_CUDA Pixel operator+(const Pixel& rhs) {
 	float r = _r+rhs._r; if (r<0.f) r=0.f; if (r>255.f) r=255.f;
 	float g = _g+rhs._g; if (g<0.f) g=0.f; if (g>255.f) g=255.f;
 	float b = _b+rhs._b; if (b<0.f) b=0.f; if (b>255.f) b=255.f;
 	return Pixel(r,g,b);
     }
-    Pixel operator*(const coord& rhs) { return Pixel(rhs*_r, rhs*_g, rhs*_b); }
+    ALSO_IN_CUDA Pixel operator*(const coord& rhs) { return Pixel(rhs*_r, rhs*_g, rhs*_b); }
 };
 
 #endif
