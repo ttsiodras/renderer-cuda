@@ -52,7 +52,8 @@ and installed it in /opt/cuda-3.2/). After this, a simple...
 
 If you are using ArchLinux,
 
-	pacman -S cuda
+	pacman -S cuda sdl
+	yaourt -S lib3ds
 
 then change dir to renderer-cuda-archlinux
 
@@ -61,7 +62,7 @@ then change dir to renderer-cuda-archlinux
 remember to change the CUDA_PATH(default is /opt/cuda) in Makefile
 
 	make build
-	./CUDAraytracer 3D-objects/chessboard.tri
+	./CUDAraytracer ../3D-objects/chessboard.tri
 
 ...will work.
 
