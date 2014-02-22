@@ -1,0 +1,10 @@
+bash$ export CUDA_PROFILE=1
+bash$ export CUDA_PROFILE_CONFIG=$HOME/.cuda_profile_config
+bash$ cat >> $HOME/.cuda_profile_config
+cputime
+occupancy
+gld_incoherent
+gld_coherent
+gst_incoherent
+gst_coherent
+(ctrl-D)
