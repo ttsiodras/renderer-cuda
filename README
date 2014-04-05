@@ -28,20 +28,41 @@ with the commercial one, too.
 ### Under Linux
 
 The code has 3 dependencies: You must have installed...
-    - OpenGL (with GLEW and GLUT)
-    - libSDL
-    - CUDA toolkit 
+	- OpenGL (with GLEW and GLUT)
+	- libSDL
+	- CUDA toolkit 
+
+#### Debian
 
 If you are using Debian, simply...
 
-    sudo apt-get install libglew1.5-dev freeglut3-dev mesa-common-dev
+	sudo apt-get install libglew1.5-dev freeglut3-dev mesa-common-dev
 
 ...and install the CUDA toolkit from NVIDIA (I downloaded version 3.2, 
 and installed it in /opt/cuda-3.2/). After this, a simple...
 
-    ./configure --with-cuda=/path/to/your/cudaToolkit
-    make
-    ./src/cudaRenderer 3D-objects/chessboard.tri
+	./configure --with-cuda=/path/to/your/cudaToolkit
+	make
+	./src/cudaRenderer 3D-objects/chessboard.tri
+
+...will work.
+
+
+#### ArchLinux
+
+If you are using ArchLinux,
+
+	pacman -S cuda sdl
+	yaourt -S lib3ds
+
+then change dir to renderer-cuda-archlinux
+
+	cd renderer-cuda-archlinux
+	
+remember to change the CUDA_PATH(default is /opt/cuda) in Makefile
+
+	make build
+	./CUDAraytracer ../3D-objects/chessboard.tri
 
 ...will work.
 
@@ -70,9 +91,9 @@ Since it reports frame rate at the end, you can use this as a benchmark
 for CUDA cards. Just spawn with "-b" to request benchmarking:
 (Note: keys don't work in benchmarking mode)
 
-    ./src/cudaRenderer -b 150 3D-objects/chessboard.tri
+	./src/cudaRenderer -b 150 3D-objects/chessboard.tri
 
 This will draw 150 frames and report speed back. With my GT240, it reports:
 
-    Rendering 150 frames in 8.117 seconds. (18.4797 fps)
+	Rendering 150 frames in 8.117 seconds. (18.4797 fps)
 
