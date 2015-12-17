@@ -66,3 +66,6 @@ EXTRA_DIST = README COPYING INSTALL AUTHORS NEWS ChangeLog \
 	VisualC/libSDL/include/SDL/close_code.h \
 	VisualC/libSDL/lib/SDL.lib \
 	VisualC/libSDL/lib/SDLmain.lib
+
+bench:
+	make -C src bench
