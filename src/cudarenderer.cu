@@ -861,20 +861,20 @@ void CudaRender(
 	g_bFirstTime = false;
 
 	cudaChannelFormatDesc channel1desc = cudaCreateChannelDesc<uint1>();
-	cudaBindTexture(NULL, &g_triIdxListTexture, cudaTriIdxList, &channel1desc, g_triIndexListNo*sizeof(uint1));
+	SAFE( cudaBindTexture(NULL, &g_triIdxListTexture, cudaTriIdxList, &channel1desc, g_triIndexListNo*sizeof(uint1)) );
 
 	cudaChannelFormatDesc channel2desc = cudaCreateChannelDesc<float2>();
-	cudaBindTexture(NULL, &g_pCFBVHlimitsTexture, cudaBVHlimits, &channel2desc, g_pCFBVH_No*6*sizeof(float));
+	SAFE( cudaBindTexture(NULL, &g_pCFBVHlimitsTexture, cudaBVHlimits, &channel2desc, g_pCFBVH_No*6*sizeof(float)) );
 
-	cudaChannelFormatDesc channel3desc = cudaCreateChannelDesc<int4>();
-	cudaBindTexture(NULL, &g_pCFBVHindexesOrTrilistsTexture, cudaBVHindexesOrTrilists, &channel3desc,
-	    g_pCFBVH_No*sizeof(uint4));
+	cudaChannelFormatDesc channel3desc = cudaCreateChannelDesc<uint4>();
+	SAFE( cudaBindTexture(NULL, &g_pCFBVHindexesOrTrilistsTexture, cudaBVHindexesOrTrilists, &channel3desc,
+	    g_pCFBVH_No*sizeof(uint4)) );
 
 	cudaChannelFormatDesc channel4desc = cudaCreateChannelDesc<float4>();
-	cudaBindTexture(NULL, &g_verticesTexture, cudaPtrVertices, &channel4desc, g_verticesNo*8*sizeof(float));
+	SAFE( cudaBindTexture(NULL, &g_verticesTexture, cudaPtrVertices, &channel4desc, g_verticesNo*8*sizeof(float)) );
 
 	cudaChannelFormatDesc channel5desc = cudaCreateChannelDesc<float4>();
-	cudaBindTexture(NULL, &g_trianglesTexture, cudaTriangleIntersectionData, &channel5desc, g_trianglesNo*20*sizeof(float));
+	SAFE( cudaBindTexture(NULL, &g_trianglesTexture, cudaTriangleIntersectionData, &channel5desc, g_trianglesNo*20*sizeof(float)) );
     }
 
     int *pixels;
@@ -977,7 +977,7 @@ void CudaRender(
     }
     cudaError_t error = cudaGetLastError();
     if(error != cudaSuccess) {
-	printf("CUDA error: %s\n", cudaGetErrorString(error));
+	printf("CUDA kernel error: %s\n", cudaGetErrorString(error));
 	exit(-1);
     }
 
@@ -1011,4 +1011,9 @@ void CudaRender(
 	    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, help[o]);
     }
     SDL_GL_SwapBuffers();
+}
+
+void setConstants() {
+    SAFE( cudaMemcpyToSymbol(VERTICES, &g_verticesNo, sizeof(int)) );
+    SAFE( cudaMemcpyToSymbol(TRIANGLES, &g_trianglesNo, sizeof(int)) );
 }

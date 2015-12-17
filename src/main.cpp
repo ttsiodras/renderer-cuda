@@ -225,8 +225,7 @@ int main(int argc, char *argv[])
 
     SAFE( cudaMalloc((void**)&cudaTriangles, g_trianglesNo*sizeof(Triangle)) );
     SAFE( cudaMemcpy(cudaTriangles, g_triangles, g_trianglesNo*sizeof(Triangle), cudaMemcpyHostToDevice) );
-    SAFE( cudaMemcpyToSymbol("VERTICES", &g_verticesNo, sizeof(int)) );
-    SAFE( cudaMemcpyToSymbol("TRIANGLES", &g_trianglesNo, sizeof(int)) );
+    setConstants();
 
     float angle1=0.0f;
     float angle2=0.0f;
