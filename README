@@ -6,9 +6,41 @@ This is a real-time raytracer, supporting .3ds, .ply (ascii) and .tri (binary) f
 
 ## COMPILE/INSTALL/RUN
 
+### Under Linux
+
+The code has 3 dependencies: You must have installed...
+    - OpenGL (with GLEW and GLUT)
+    - libSDL
+    - CUDA toolkit
+
+If you are using Debian,  the first two are covered with:
+
+    sudo apt-get install libsdl1.2-dev libglew1.5-dev freeglut3-dev mesa-common-dev
+
+...and the second is also quite easy - add the `contrib` and `non-free`
+collections to `/etc/apt/sources.list` - that is, at the end of your distro's
+repository line. In my case, it looks like this after editing:
+
+    deb http://ftp.gr.debian.org/debian/ jessie main non-free contrib
+
+...and then:
+
+    $ sudo apt-get install nvidia-cuda-dev nvidia-cuda-toolkit
+
+    $ dpkg -l | grep nvidia-cuda
+    ii  nvidia-cuda-dev      6.0.37-5  amd64  NVIDIA CUDA development files
+    ii  nvidia-cuda-toolkit  6.0.37-5  amd64  NVIDIA CUDA development toolkit
+
+After installing the dependencies, a simple...
+
+    ./configure && make && ./src/cudaRenderer 3D-objects/chessboard.tri
+
+...will work.
+
 ### Under Windows
 
-Make sure you have the CUDA toolkit installed (I used version 3.2).
+Make sure you have the CUDA toolkit installed (I used version 6.0)
+
 Then:
 
 1. Open the cudaRenderer_vc90.sln with your Visual Studio
@@ -24,26 +56,6 @@ Read below for keyboard control intructions, or just press 'H' for help.
 
 Note: I used the free Visual C++ 2008 Express Edition, but this should work 
 with the commercial one, too.
-
-### Under Linux
-
-The code has 3 dependencies: You must have installed...
-    - OpenGL (with GLEW and GLUT)
-    - libSDL
-    - CUDA toolkit 
-
-If you are using Debian, simply...
-
-    sudo apt-get install libglew1.5-dev freeglut3-dev mesa-common-dev
-
-...and install the CUDA toolkit from NVIDIA (I downloaded version 3.2, 
-and installed it in /opt/cuda-3.2/). After this, a simple...
-
-    ./configure --with-cuda=/path/to/your/cudaToolkit
-    make
-    ./src/cudaRenderer 3D-objects/chessboard.tri
-
-...will work.
 
 ## Keyboard controls
 
@@ -76,3 +88,6 @@ This will draw 150 frames and report speed back. With my GT240, it reports:
 
     Rendering 150 frames in 8.117 seconds. (18.4797 fps)
 
+You can also do this easily via:
+
+    make bench
