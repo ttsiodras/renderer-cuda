@@ -60,8 +60,8 @@
 #  define SAFE_NO_SYNC( call ) {                                     \
     cudaError_t err = call;                                                  \
     if( cudaSuccess != err) {                                               \
-        fprintf(stderr, "Cuda driver error %x in file '%s' in line %i.\n",   \
-                err, __FILE__, __LINE__ );                                   \
+        fprintf(stderr, "Cuda driver error '%s'\n in file '%s' in line %i.\n",   \
+                cudaGetErrorString(err), __FILE__, __LINE__ );                                   \
         exit(EXIT_FAILURE);                                                  \
     } }
 
@@ -109,5 +109,8 @@ void CudaRender(
     int *cudaTriIdxList, float *cudaBVHlimits, int *cudaBVHindexesOrTrilists,
     Vector3 *eye, Vector3 *pLightInWorldSpace,
     unsigned *cudaMortonTable);
+
+// After CUDA5.0 API change, constants can't be set from C++ world.
+void setConstants();
 
 #endif
