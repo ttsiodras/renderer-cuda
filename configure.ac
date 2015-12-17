@@ -1,4 +1,4 @@
-AC_INIT([cudaRenderer], [2.1h], [ttsiod@softlab.ntua.gr])
+AC_INIT([cudaRenderer], [2.1k], [ttsiod@softlab.ntua.gr])
 
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIR([ac-macros])
