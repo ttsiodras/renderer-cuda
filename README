@@ -1,6 +1,6 @@
-![Generated in the renderer's raytracing mode, with reflections and refractions enabled.](http://users.softlab.ntua.gr/~ttsiod/chessRefraction.jpg "Generated in the renderer's raytracing mode, with reflections and refractions enabled.")
+![Generated in the renderer's raytracing mode, with reflections and refractions enabled.](https://www.thanassis.space/chessRefraction.jpg "Generated in the renderer's raytracing mode, with reflections and refractions enabled.")
 
-*[Full blog post about this code is here (screenshots, history, etc)](http://users.softlab.ece.ntua.gr/~ttsiod/cudarenderer-BVH.html)*
+*[Full blog post about this code is here (screenshots, history, etc)](https://www.thanassis.space/cudarenderer-BVH.html)*
 
 This is a real-time raytracer, supporting .3ds, .ply (ascii) and .tri (binary) formats.
 
