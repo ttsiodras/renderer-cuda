@@ -22,13 +22,13 @@ if test "x$with_cudaSDK" != x; then
     CUDA_LIBS="-L$with_cudaSDK/lib$SUFFIX64 -lcudart"
     NVCC="$with_cudaSDK/bin/nvcc"
 else
-    if [ -d /usr/local/cuda -o -L /usr/local/cuda ] ; then
+    if test -d /usr/local/cuda -o -L /usr/local/cuda ; then
         with_cudaSDK=/usr/local/cuda
         CUDA_CFLAGS="-I$with_cudaSDK/include"
         CUDA_LIBS="-L$with_cudaSDK/lib$SUFFIX64 -lcudart"
         NVCC="$with_cudaSDK/bin/nvcc"
     else 
-        if [ -d /opt/cuda ] ; then
+        if test -d /opt/cuda ; then
             with_cudaSDK=/opt/cuda
             CUDA_CFLAGS="-I$with_cudaSDK/include"
             CUDA_LIBS="-L$with_cudaSDK/lib$SUFFIX64 -lcudart"
