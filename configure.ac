@@ -6,17 +6,38 @@ AC_CONFIG_MACRO_DIR([ac-macros])
 ########################
 # Check for CUDA
 ########################
+
+# Ticket #3 - adapt to 64bit builds
+AC_CHECK_SIZEOF([long])
+if test "$ac_cv_sizeof_long" -eq 8 ; then
+    SUFFIX64="64"
+else
+    SUFFIX64=""
+fi
+
 AC_ARG_WITH([cuda],
     [  --with-cudaSDK=PATH        prefix where CUDA SDK is installed])
 if test "x$with_cudaSDK" != x; then
-  CUDA_CFLAGS="-I$with_cudaSDK/include"
-  CUDA_LIBS="-L$with_cudaSDK/lib -lcudart"
-  NVCC="$with_cudaSDK/bin/nvcc"
+    CUDA_CFLAGS="-I$with_cudaSDK/include"
+    CUDA_LIBS="-L$with_cudaSDK/lib$SUFFIX64 -lcudart"
+    NVCC="$with_cudaSDK/bin/nvcc"
 else
-  # Assume it is installed in global directories
-  CUDA_CFLAGS=""
-  CUDA_LIBS="-lcudart"
-  NVCC="nvcc"
+    if [ -d /usr/local/cuda ] ; then
+        with_cudaSDK=/usr/local/cuda
+        CUDA_CFLAGS="-I$with_cudaSDK/include"
+        CUDA_LIBS="-L$with_cudaSDK/lib$SUFFIX64 -lcudart"
+        NVCC="$with_cudaSDK/bin/nvcc"
+    else if if [ -d /opt/cuda ] ; then
+        with_cudaSDK=/opt/cuda
+        CUDA_CFLAGS="-I$with_cudaSDK/include"
+        CUDA_LIBS="-L$with_cudaSDK/lib$SUFFIX64 -lcudart"
+        NVCC="$with_cudaSDK/bin/nvcc"
+    else
+        # Assume it is installed in global directories
+        CUDA_CFLAGS=""
+        CUDA_LIBS="-lcudart"
+        NVCC="nvcc"
+    fi
 fi
 NVCCFLAGS="-O2 -use_fast_math --compiler-options -fno-inline -I ."
 

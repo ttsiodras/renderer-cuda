@@ -40,6 +40,9 @@
 /* Define to 1 if you have the `vprintf' function. */
 #undef HAVE_VPRINTF
 
+/* Define to 1 if your C compiler doesn't accept -c and -o together. */
+#undef NO_MINUS_C_MINUS_O
+
 /* Name of package */
 #undef PACKAGE
 
@@ -63,6 +66,9 @@
 
 /* Define this to use SSE intrinsics. */
 #undef SIMD_SSE
+
+/* The size of `long', as computed by sizeof. */
+#undef SIZEOF_LONG
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
