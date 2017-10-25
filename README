@@ -8,7 +8,8 @@ This is a real-time raytracer, supporting .3ds, .ply (ascii) and .tri (binary) f
 
 ### Under Linux
 
-The code has 3 dependencies: You must have installed...
+The code has 3 dependencies: You must install...
+
     - OpenGL (with GLEW and GLUT)
     - libSDL
     - CUDA toolkit
