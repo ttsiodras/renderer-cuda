@@ -556,7 +556,8 @@ int main(int argc, char *argv[])
     destroy_texture(&tex);
     destroy_buffer(&buffer);
 
-    cudaThreadExit();
+    // cudaThreadExit() is deprecated; use cudaDeviceSynchronize() or just exit
+    SAFE(cudaDeviceSynchronize());
 
     return 0;
 }

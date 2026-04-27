@@ -67,11 +67,20 @@ __constant__ unsigned TRIANGLES;
 
 // Textures for vertices, triangles and BVH data
 // (see CudaRender() below, as well as main() to see the data setup process)
-texture<uint1, 1, cudaReadModeElementType> g_triIdxListTexture;
-texture<float2, 1, cudaReadModeElementType> g_pCFBVHlimitsTexture;
-texture<uint4, 1, cudaReadModeElementType> g_pCFBVHindexesOrTrilistsTexture;
-texture<float4, 1, cudaReadModeElementType> g_verticesTexture;
-texture<float4, 1, cudaReadModeElementType> g_trianglesTexture;
+// Using modern CUDA texture object API (CUDA 13.0+)
+// Store texture object handles in constant memory for device access
+__constant__ cudaTextureObject_t g_triIdxListTexture_const;
+__constant__ cudaTextureObject_t g_pCFBVHlimitsTexture_const;
+__constant__ cudaTextureObject_t g_pCFBVHindexesOrTrilistsTexture_const;
+__constant__ cudaTextureObject_t g_verticesTexture_const;
+__constant__ cudaTextureObject_t g_trianglesTexture_const;
+
+// Host-side texture object variables
+cudaTextureObject_t g_triIdxListTexture = 0;
+cudaTextureObject_t g_pCFBVHlimitsTexture = 0;
+cudaTextureObject_t g_pCFBVHindexesOrTrilistsTexture = 0;
+cudaTextureObject_t g_verticesTexture = 0;
+cudaTextureObject_t g_trianglesTexture = 0;
 
 // Utility functions
 
@@ -168,7 +177,7 @@ __global__ void CoreLoopVertices(int *pixels, Matrix3 *cudaWorldToCameraSpace, V
     // Simple projection and ploting of a white point per vertex
 
     // Plot projected coordinates (on screen)
-    Vector3 v(tex1Dfetch(g_verticesTexture, 2*idx));
+    Vector3 v(tex1Dfetch<float4>(g_verticesTexture_const, 2*idx));
     ProjectAndPlot(
 	TransformToSomeSpace(v, cudaWorldToCameraSpace, eye),
 	pixels);
@@ -194,8 +203,8 @@ __global__ void CoreLoopTriangles(int *pixels, Matrix3 *cudaWorldToCameraSpace, 
     // First check if the triangle is visible from where we stand
     // (closed objects only)
 
-    float4 center = tex1Dfetch(g_trianglesTexture, 5*idx);
-    float4 normal = tex1Dfetch(g_trianglesTexture, 5*idx+1);
+    float4 center = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx);
+    float4 normal = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx+1);
 
     Vector3 triToEye = *eye;
     triToEye -= center;
@@ -210,9 +219,9 @@ __global__ void CoreLoopTriangles(int *pixels, Matrix3 *cudaWorldToCameraSpace, 
 
     // For each of the 3 vertices of triangle j of object i,
     // transform to camera space, project and plot them
-    Vector3 v1(tex1Dfetch(g_verticesTexture, 2*pTriangles[idx]._idx1));
-    Vector3 v2(tex1Dfetch(g_verticesTexture, 2*pTriangles[idx]._idx2));
-    Vector3 v3(tex1Dfetch(g_verticesTexture, 2*pTriangles[idx]._idx3));
+    Vector3 v1(tex1Dfetch<float4>(g_verticesTexture_const, 2*pTriangles[idx]._idx1));
+    Vector3 v2(tex1Dfetch<float4>(g_verticesTexture_const, 2*pTriangles[idx]._idx2));
+    Vector3 v3(tex1Dfetch<float4>(g_verticesTexture_const, 2*pTriangles[idx]._idx3));
     ProjectAndPlot( TransformToSomeSpace(v1, cudaWorldToCameraSpace, eye), pixels, color);
     ProjectAndPlot( TransformToSomeSpace(v2, cudaWorldToCameraSpace, eye), pixels, color);
     ProjectAndPlot( TransformToSomeSpace(v3, cudaWorldToCameraSpace, eye), pixels, color);
@@ -272,11 +281,11 @@ __device__ bool RayIntersectsBox(
 	    return false;									    \
     }
 
-    limits = tex1Dfetch(g_pCFBVHlimitsTexture, 3*boxIdx); // box.bottom._x/top._x placed in limits.x/limits.y
+    limits = tex1Dfetch<float2>(g_pCFBVHlimitsTexture_const, 3*boxIdx); // box.bottom._x/top._x placed in limits.x/limits.y
     CHECK_NEAR_AND_FAR_INTERSECTION(x)
-    limits = tex1Dfetch(g_pCFBVHlimitsTexture, 3*boxIdx+1); // box.bottom._y/top._y placed in limits.x/limits.y
+    limits = tex1Dfetch<float2>(g_pCFBVHlimitsTexture_const, 3*boxIdx+1); // box.bottom._y/top._y placed in limits.x/limits.y
     CHECK_NEAR_AND_FAR_INTERSECTION(y)
-    limits = tex1Dfetch(g_pCFBVHlimitsTexture, 3*boxIdx+2); // box.bottom._z/top._z placed in limits.x/limits.y
+    limits = tex1Dfetch<float2>(g_pCFBVHlimitsTexture_const, 3*boxIdx+2); // box.bottom._z/top._z placed in limits.x/limits.y
     CHECK_NEAR_AND_FAR_INTERSECTION(z)
 
     return true;
@@ -336,7 +345,7 @@ __device__ bool BVH_IntersectTriangles(
 	//CacheFriendlyBVHNode *pCurrent = &cudaBVHNodes[boxIdx];
 	stackIdx--;
 
-	uint4 data = tex1Dfetch(g_pCFBVHindexesOrTrilistsTexture, boxIdx);
+	uint4 data = tex1Dfetch<uint4>(g_pCFBVHindexesOrTrilistsTexture_const, boxIdx);
 
 	// original, "pure" BVH form...
 	//if (!pCurrent->IsLeaf()) {
@@ -376,13 +385,13 @@ __device__ bool BVH_IntersectTriangles(
 		//const Triangle& triangle = pTriangles[cudaTriIdxList[i]];
 
 		// textured BVH form...
-		int idx = tex1Dfetch(g_triIdxListTexture, i).x;
+		int idx = tex1Dfetch<uint1>(g_triIdxListTexture_const, i).x;
 
 		if (avoidSelf == idx)
 		    continue; // avoid self-reflections/refractions
 
-		float4 center = tex1Dfetch(g_trianglesTexture, 5*idx);
-		float4 normal = tex1Dfetch(g_trianglesTexture, 5*idx+1);
+		float4 center = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx);
+		float4 normal = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx+1);
 
 		// doCulling is a compile-time param, this code will be "codegenerated"
 		// at compile time only for reflection-related calls to Raytrace (see below)
@@ -413,11 +422,11 @@ __device__ bool BVH_IntersectTriangles(
 		hit += origin;
 
 		// Is the intersection of the ray with the triangle's plane INSIDE the triangle?
-		float4 ee1 = tex1Dfetch(g_trianglesTexture, 5*idx+2);
+		float4 ee1 = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx+2);
 		coord kt1 = dotCUDA(ee1, hit) - ee1.w; if (kt1<0.0f) continue;
-		float4 ee2 = tex1Dfetch(g_trianglesTexture, 5*idx+3);
+		float4 ee2 = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx+3);
 		coord kt2 = dotCUDA(ee2, hit) - ee2.w; if (kt2<0.0f) continue;
-		float4 ee3 = tex1Dfetch(g_trianglesTexture, 5*idx+4);
+		float4 ee3 = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx+4);
 		coord kt3 = dotCUDA(ee3, hit) - ee3.w; if (kt3<0.0f) continue;
 
 		// It is, "hit" is the world space coordinate of the intersection.
@@ -494,14 +503,14 @@ __device__ Pixel Raytrace(
     float4 N2;
     float4 V3;
     float4 N3;
-    V1 = tex1Dfetch(g_verticesTexture, 2*pBestTri->_idx1);
-    V2 = tex1Dfetch(g_verticesTexture, 2*pBestTri->_idx2);
-    V3 = tex1Dfetch(g_verticesTexture, 2*pBestTri->_idx3);
+    V1 = tex1Dfetch<float4>(g_verticesTexture_const, 2*pBestTri->_idx1);
+    V2 = tex1Dfetch<float4>(g_verticesTexture_const, 2*pBestTri->_idx2);
+    V3 = tex1Dfetch<float4>(g_verticesTexture_const, 2*pBestTri->_idx3);
     if (doPhongInterp) { // template-param, compile-time check
 	// These are the closest triangle's vertices...
-	N1 = tex1Dfetch(g_verticesTexture, 2*pBestTri->_idx1+1);
-	N2 = tex1Dfetch(g_verticesTexture, 2*pBestTri->_idx2+1);
-	N3 = tex1Dfetch(g_verticesTexture, 2*pBestTri->_idx3+1);
+	N1 = tex1Dfetch<float4>(g_verticesTexture_const, 2*pBestTri->_idx1+1);
+	N2 = tex1Dfetch<float4>(g_verticesTexture_const, 2*pBestTri->_idx2+1);
+	N3 = tex1Dfetch<float4>(g_verticesTexture_const, 2*pBestTri->_idx3+1);
 	const Vector3 bestTriA = Vector3(V1.x,V1.y,V1.z);
 	const Vector3 bestTriB = Vector3(V2.x,V2.y,V2.z);
 	const Vector3 bestTriC = Vector3(V3.x,V3.y,V3.z);
@@ -861,20 +870,76 @@ void CudaRender(
 	g_bFirstTime = false;
 
 	cudaChannelFormatDesc channel1desc = cudaCreateChannelDesc<uint1>();
-	SAFE( cudaBindTexture(NULL, &g_triIdxListTexture, cudaTriIdxList, &channel1desc, g_triIndexListNo*sizeof(uint1)) );
-
 	cudaChannelFormatDesc channel2desc = cudaCreateChannelDesc<float2>();
-	SAFE( cudaBindTexture(NULL, &g_pCFBVHlimitsTexture, cudaBVHlimits, &channel2desc, g_pCFBVH_No*6*sizeof(float)) );
-
 	cudaChannelFormatDesc channel3desc = cudaCreateChannelDesc<uint4>();
-	SAFE( cudaBindTexture(NULL, &g_pCFBVHindexesOrTrilistsTexture, cudaBVHindexesOrTrilists, &channel3desc,
-	    g_pCFBVH_No*sizeof(uint4)) );
-
 	cudaChannelFormatDesc channel4desc = cudaCreateChannelDesc<float4>();
-	SAFE( cudaBindTexture(NULL, &g_verticesTexture, cudaPtrVertices, &channel4desc, g_verticesNo*8*sizeof(float)) );
-
 	cudaChannelFormatDesc channel5desc = cudaCreateChannelDesc<float4>();
-	SAFE( cudaBindTexture(NULL, &g_trianglesTexture, cudaTriangleIntersectionData, &channel5desc, g_trianglesNo*20*sizeof(float)) );
+
+	// Texture descriptor for 1D textures (CUDA 13.0+ API)
+cudaTextureDesc texDesc = {};
+	texDesc.addressMode[0] = cudaAddressModeClamp;
+	texDesc.addressMode[1] = cudaAddressModeClamp;
+	texDesc.addressMode[2] = cudaAddressModeClamp;
+	texDesc.filterMode = cudaFilterModePoint;
+	texDesc.readMode = cudaReadModeElementType;
+	texDesc.normalizedCoords = 0;
+	texDesc.sRGB = 0;
+	texDesc.maxAnisotropy = 0;
+	texDesc.mipmapFilterMode = cudaFilterModePoint;
+	texDesc.mipmapLevelBias = 0.0f;
+	texDesc.minMipmapLevelClamp = 0.0f;
+	texDesc.maxMipmapLevelClamp = 0.0f;
+	texDesc.disableTrilinearOptimization = 0;
+	texDesc.seamlessCubemap = 0;
+	texDesc.borderColor[0] = 0.0f;
+	texDesc.borderColor[1] = 0.0f;
+	texDesc.borderColor[2] = 0.0f;
+	texDesc.borderColor[3] = 0.0f;
+
+	// Create texture objects for triIdxList
+cudaResourceDesc resDesc1 = {};
+	resDesc1.resType = cudaResourceTypeLinear;
+	resDesc1.res.linear.desc = channel1desc;
+	resDesc1.res.linear.devPtr = cudaTriIdxList;
+	resDesc1.res.linear.sizeInBytes = g_triIndexListNo*sizeof(uint1);
+	SAFE(cudaCreateTextureObject(&g_triIdxListTexture, &resDesc1, &texDesc, NULL));
+	SAFE(cudaMemcpyToSymbol(g_triIdxListTexture_const, &g_triIdxListTexture, sizeof(cudaTextureObject_t)));
+
+	// Create texture objects for BVH limits
+cudaResourceDesc resDesc2 = {};
+	resDesc2.resType = cudaResourceTypeLinear;
+	resDesc2.res.linear.desc = channel2desc;
+	resDesc2.res.linear.devPtr = cudaBVHlimits;
+	resDesc2.res.linear.sizeInBytes = g_pCFBVH_No*6*sizeof(float);
+	SAFE(cudaCreateTextureObject(&g_pCFBVHlimitsTexture, &resDesc2, &texDesc, NULL));
+	SAFE(cudaMemcpyToSymbol(g_pCFBVHlimitsTexture_const, &g_pCFBVHlimitsTexture, sizeof(cudaTextureObject_t)));
+
+	// Create texture objects for BVH indexes/trilists
+cudaResourceDesc resDesc3 = {};
+	resDesc3.resType = cudaResourceTypeLinear;
+	resDesc3.res.linear.desc = channel3desc;
+	resDesc3.res.linear.devPtr = cudaBVHindexesOrTrilists;
+	resDesc3.res.linear.sizeInBytes = g_pCFBVH_No*sizeof(uint4);
+	SAFE(cudaCreateTextureObject(&g_pCFBVHindexesOrTrilistsTexture, &resDesc3, &texDesc, NULL));
+	SAFE(cudaMemcpyToSymbol(g_pCFBVHindexesOrTrilistsTexture_const, &g_pCFBVHindexesOrTrilistsTexture, sizeof(cudaTextureObject_t)));
+
+	// Create texture objects for vertices
+cudaResourceDesc resDesc4 = {};
+	resDesc4.resType = cudaResourceTypeLinear;
+	resDesc4.res.linear.desc = channel4desc;
+	resDesc4.res.linear.devPtr = cudaPtrVertices;
+	resDesc4.res.linear.sizeInBytes = g_verticesNo*8*sizeof(float);
+	SAFE(cudaCreateTextureObject(&g_verticesTexture, &resDesc4, &texDesc, NULL));
+	SAFE(cudaMemcpyToSymbol(g_verticesTexture_const, &g_verticesTexture, sizeof(cudaTextureObject_t)));
+
+	// Create texture objects for triangles
+cudaResourceDesc resDesc5 = {};
+	resDesc5.resType = cudaResourceTypeLinear;
+	resDesc5.res.linear.desc = channel5desc;
+	resDesc5.res.linear.devPtr = cudaTriangleIntersectionData;
+	resDesc5.res.linear.sizeInBytes = g_trianglesNo*20*sizeof(float);
+	SAFE(cudaCreateTextureObject(&g_trianglesTexture, &resDesc5, &texDesc, NULL));
+	SAFE(cudaMemcpyToSymbol(g_trianglesTexture_const, &g_trianglesTexture, sizeof(cudaTextureObject_t)));
     }
 
     int *pixels;
@@ -981,7 +1046,7 @@ void CudaRender(
 	exit(-1);
     }
 
-    SAFE(cudaThreadSynchronize());
+    SAFE(cudaDeviceSynchronize());
     SAFE(cudaGLUnmapBufferObject(buffer));
 
     // Use OpenGL texture to display the generated frame at lightning speed
@@ -1012,6 +1077,8 @@ void CudaRender(
     }
     SDL_GL_SwapBuffers();
 }
+
+
 
 void setConstants() {
     SAFE( cudaMemcpyToSymbol(VERTICES, &g_verticesNo, sizeof(int)) );
