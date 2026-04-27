@@ -1,0 +1,21 @@
+# Makefile.am for ROCm/HIP build
+# To build: copy this to Makefile.am, then run autoreconf -i && ./configure && make
+
+bin_PROGRAMS = hipRenderer
+
+hipRenderer_SOURCES = main_rocm.cpp hiprenderer.hip.cpp \
+    Algebra.cpp BVH.cpp Camera.cpp Keyboard.cpp \
+    Loader.cpp Utility.cpp
+
+hiprenderer.hip.cpp: hiprenderer.hip.cpp
+
+AM_CXXFLAGS = -O2 -g
+AM_LDFLAGS = -lGL -lGLU -lglut -lSDL
+
+# HIP compiler flags
+HIPCC = hipcc
+AM_CXXFLAGS += -I$(HIP_PATH)/include
+AM_LDFLAGS += -L$(HIP_PATH)/lib -lhipblas -lamdhip64
+
+# If using system HIP installation, these might be auto-detected
+# Otherwise set HIP_PATH=/opt/rocm

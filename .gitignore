@@ -27,3 +27,4 @@ src/config.h
 src/cudaRenderer
 src/stamp-h1
 tags
+**/*bvh

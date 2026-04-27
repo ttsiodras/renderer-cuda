@@ -1,0 +1,34 @@
+/*
+ *  renderer - A simple implementation of polygon-based 3D algorithms.
+ *  Copyright (C) 2004  Thanassis Tsiodras (ttsiodras@gmail.com)
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#ifndef HIPRENDERER_H
+#define HIPRENDERER_H
+
+// HIP renderer functions
+void HipRender(
+    Matrix3 *hipWorldToCameraSpace,
+    Vertex *hipPtrVertices, Triangle *hipPtrTriangles, float *hipTriangleIntersectionData,
+    int *hipTriIdxList, float *hipBVHlimits, int *hipBVHindexesOrTrilists,
+    Vector3 *hipEyePosInWorldSpace, Vector3 *hipLightPosInWorldSpace,
+    unsigned *hipMortonTable,
+    int *hipPixels);
+
+void setHipConstants();
+
+#endif // HIPRENDERER_H
