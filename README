@@ -4,6 +4,8 @@
 
 This is a real-time raytracer, supporting .3ds, .ply (ascii) and .tri (binary) formats.
 
+*Updated, 2026/April: Code now compiles and works with CUDA 13.0. Thank you, Qwen3.5 27B :-)*
+
 ## COMPILE/INSTALL/RUN
 
 ### Under Linux
