@@ -41,6 +41,7 @@
 
 // ROCm/HIP headers
 #include <hip/hip_runtime.h>
+#include <hip/hip_gl_interop.h>
 
 #define DEFINE_GLOBALS
 #include "hiprenderer_globals.h"
@@ -163,9 +164,30 @@ int main(int argc, char *argv[])
     glViewport(0, 0, MAXX, MAXY);
     glClearColor(0.3f, 0.3f, 0.3f, 0.5f);
     glEnable(GL_TEXTURE_2D);
+    // Ensure HIP uses the same GPU as the current OpenGL context
+    unsigned int hipDeviceCount = 0;
+    int hipDevices[8];
+    hipError_t hipErr = hipGLGetDevices(&hipDeviceCount, hipDevices, 8, hipGLDeviceListCurrentFrame);
+    if (hipErr != hipSuccess || hipDeviceCount == 0) {
+        fprintf(stderr, "hipGLGetDevices failed or no devices found\n");
+        exit(1);
+    }
+    SAFE(hipSetDevice(hipDevices[0]));
     glLoadIdentity();
 
     create_texture(&tex);
+
+    // Create Pixel Buffer Object (PBO) for OpenGL-HIP interop
+    GLuint pbo;
+    glGenBuffers(1, &pbo);
+    // Bind and allocate buffer before registering with HIP
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, MAXX*MAXY*4, nullptr, GL_DYNAMIC_DRAW);
+    // Register PBO with HIP for direct writing while it is bound
+    hipGraphicsResource_t pboResource;
+    SAFE(hipGraphicsGLRegisterBuffer(&pboResource, pbo, hipGraphicsRegisterFlagsWriteDiscard));
+    // Unbind after registration
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
     Vertex *hipVertices;
     Triangle *hipTriangles;
@@ -317,13 +339,9 @@ int main(int argc, char *argv[])
     ModeDescription();
     watch.reset();
     
-    // Allocate device and host memory for pixel buffer
-    int *hipPixels = NULL;
+    // Allocate host memory for pixel buffer (debug output disabled)
     int *hostPixels = NULL;
     unsigned char *rgbaPixels = NULL;
-    SAFE( hipMalloc((void**)&hipPixels, MAXX*MAXY*sizeof(int)) );
-    hostPixels = (int*)malloc(MAXX*MAXY*sizeof(int));
-    rgbaPixels = (unsigned char*)malloc(MAXX*MAXY*4);
 
     while(!keys.Abort()) {
 	framesDrawn++;
@@ -468,7 +486,14 @@ int main(int argc, char *argv[])
 	SAFE( hipMemcpy(hipLightInWorldSpace, pLight, sizeof(Vector3), hipMemcpyHostToDevice) );
 	SAFE( hipMemcpy(hipSony, &sony._mv, sizeof(sony._mv), hipMemcpyHostToDevice) );
 
-	// Render to device memory
+	// Map PBO for HIP write
+	SAFE(hipGraphicsMapResources(1, &pboResource, 0));
+	void* devPtr = nullptr;
+	size_t size = 0;
+	SAFE(hipGraphicsResourceGetMappedPointer(&devPtr, &size, pboResource));
+	int* hipPixels = (int*)devPtr;
+
+	// Render directly into PBO memory
 	HipRender(
 	    hipSony,
 	    hipVertices, hipTriangles, hipTriangleIntersectionData,
@@ -477,45 +502,20 @@ int main(int argc, char *argv[])
 	    hipMortonTable,
 	    hipPixels);
 
-	// Copy rendered pixels back to host
-	SAFE( hipMemcpy(hostPixels, hipPixels, MAXX*MAXY*sizeof(int), hipMemcpyDeviceToHost) );
+	// Unmap PBO after rendering
+	SAFE(hipGraphicsUnmapResources(1, &pboResource, 0));
 
-	// Convert BGR int format to RGBA byte format for OpenGL (no flip)
-	for(unsigned i = 0; i < MAXX*MAXY; i++) {
-		int pixel = hostPixels[i];
-		rgbaPixels[i*4+0] = (pixel & 0xFF);           // Red
-		rgbaPixels[i*4+1] = ((pixel >> 8) & 0xFF);    // Green
-		rgbaPixels[i*4+2] = ((pixel >> 16) & 0xFF);   // Blue
-		rgbaPixels[i*4+3] = 255;                      // Alpha
-	}
-
-	// Upload to OpenGL texture
+	// Upload PBO to texture without CPU copy
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
 	glBindTexture(GL_TEXTURE_2D, tex);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MAXX, MAXY, GL_RGBA, GL_UNSIGNED_BYTE, rgbaPixels);
-	
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MAXX, MAXY, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
 	// Check for OpenGL errors
 	GLenum err = glGetError();
 	if (err != GL_NO_ERROR) {
 		fprintf(stderr, "OpenGL error uploading texture: %d\n", err);
-	}
-	
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	// Debug: save frame to PPM file
-	if (debugDump && framesDrawn <= 5) {
-		char filename[256];
-		snprintf(filename, sizeof(filename), "frame_%04d.ppm", framesDrawn);
-		FILE *fp = fopen(filename, "wb");
-		if (fp) {
-			fprintf(fp, "P6\n%d %d\n255\n", MAXX, MAXY);
-			for(unsigned i = 0; i < MAXX*MAXY; i++) {
-				fputc(rgbaPixels[i*4+0], fp);  // R
-				fputc(rgbaPixels[i*4+1], fp);  // G
-				fputc(rgbaPixels[i*4+2], fp);  // B
-			}
-			fclose(fp);
-			printf("Saved %s\n", filename);
-		}
 	}
 
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -567,9 +567,10 @@ int main(int argc, char *argv[])
     SAFE(hipFree(hipTriangles));
     SAFE(hipFree(hipTriangleIntersectionData));
     SAFE(hipFree(hipVertices));
-    SAFE(hipFree(hipPixels));
-    free(hostPixels);
-    free(rgbaPixels);
+    // Clean up PBO and HIP resource
+    hipGraphicsUnregisterResource(pboResource);
+    glDeleteBuffers(1, &pbo);
+    // Debug buffers freed (no longer used)
     destroy_texture(&tex);
 
     SAFE(hipDeviceSynchronize());
