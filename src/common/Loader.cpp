@@ -148,7 +148,7 @@ coord load_object(const char *filename)
 	    if (!fp)
 		panic("File '%s' not found!\n", filename);
 
-	    Uint32 totalPoints = 0, totalTris = 0;
+	    Uint32 totalPoints = 0;
 	    Uint32 magic;
 
 	    fread(&magic, 1, sizeof(Uint32), fp);
@@ -277,7 +277,7 @@ coord load_object(const char *filename)
 		    pCurrentTriangle++;
 		}
 		totalPoints += noOfPoints;
-		totalTris   += noOfTris;
+
 	    } while(!feof(fp));
 
 	    fclose(fp);
@@ -468,10 +468,10 @@ coord load_object(const char *filename)
 	    Triangle *pCurrentTriangle = NULL;
 
 	    string line;
-	    unsigned totalVertices, totalTriangles, lineNo=0;
+	    unsigned totalVertices, totalTriangles;
 	    bool inside = false;
 	    while(getline(file, line)) {
-		lineNo++;
+
 		if (!inside) {
 		    if (line.substr(0, 14) == "element vertex") {
 			std::istringstream str(line);

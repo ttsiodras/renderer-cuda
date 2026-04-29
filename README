@@ -4,7 +4,7 @@
 
 This is a real-time raytracer, supporting .3ds, .ply (ascii) and .tri (binary) formats.
 
-*Updated, 2026/April: Code now compiles and works with CUDA 13.0. Thank you, Qwen3.5 27B :-)*
+*Updated, 2026/April: Code now compiles and works with CUDA/13.0 and ROCm/HIP/7.2. Thank you, Qwen3.5 27B and GPT-OSS-120B :-)*
 
 ## Compilation
 

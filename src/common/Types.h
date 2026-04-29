@@ -141,6 +141,12 @@ struct Vector3
     {
 	_x = mymax(_x, rhs._x); _y = mymax(_y, rhs._y); _z = mymax(_z, rhs._z);
     }
+    ALSO_IN_CUDA Vector3& operator=(const Vector3& rhs) {
+        _x = rhs._x;
+        _y = rhs._y;
+        _z = rhs._z;
+        return *this;
+    }
 };
 
 // We need floating point components for the colors

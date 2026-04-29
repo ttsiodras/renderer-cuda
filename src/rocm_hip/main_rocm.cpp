@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 {
     bool bench = false;
     int benchFrames = 0;
-    bool debugDump = false;
+
 
     glutInit(&argc,argv);
 
@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
             benchFrames = atoi(argv[argIdx+1]);
             argIdx += 2;
         } else if (!strcmp(argv[argIdx], "-d")) {
-            debugDump = true;
+
             argIdx++;
         } else {
             break;
@@ -340,8 +340,8 @@ int main(int argc, char *argv[])
     watch.reset();
     
     // Allocate host memory for pixel buffer (debug output disabled)
-    int *hostPixels = NULL;
-    unsigned char *rgbaPixels = NULL;
+
+
 
     while(!keys.Abort()) {
 	framesDrawn++;
@@ -568,7 +568,7 @@ int main(int argc, char *argv[])
     SAFE(hipFree(hipTriangleIntersectionData));
     SAFE(hipFree(hipVertices));
     // Clean up PBO and HIP resource
-    hipGraphicsUnregisterResource(pboResource);
+    (void)hipGraphicsUnregisterResource(pboResource);
     glDeleteBuffers(1, &pbo);
     // Debug buffers freed (no longer used)
     destroy_texture(&tex);

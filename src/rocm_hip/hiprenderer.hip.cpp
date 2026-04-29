@@ -305,7 +305,7 @@ __device__ bool BVH_IntersectTriangles(
 	    for(unsigned i=data.w; i<data.w + (data.x & 0x7fffffff); i++) {
 		int idx = tex1Dfetch<uint1>(g_triIdxListTexture_const, i).x;
 
-		if (avoidSelf == idx)
+		if ((unsigned)avoidSelf == (unsigned)idx)
 		    continue;
 
 		float4 center = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx);
@@ -524,6 +524,7 @@ __device__ Pixel Raytrace<MAX_RAY_DEPTH,a,b,c,d,e>(					    \
     Triangle *pTriangles,								    \
     Vector3 *hipEyePosInWorldSpace, Vector3 *hipLightPosInWorldSpace)			    \
 {											    \
+    (void)originInWorldSpace; (void)rayInWorldSpace; (void)avoidSelf; (void)pTriangles; (void)hipEyePosInWorldSpace; (void)hipLightPosInWorldSpace; \
     return Pixel(0.f,0.f,0.f);								    \
 }
 
@@ -654,44 +655,44 @@ void HipRender(
 	resDesc1.res.linear.desc = channel1desc;
 	resDesc1.res.linear.devPtr = hipTriIdxList;
 	resDesc1.res.linear.sizeInBytes = g_triIndexListNo*sizeof(uint1);
-	hipCreateTextureObject(&g_triIdxListTexture, &resDesc1, &texDesc, NULL);
-	hipMemcpyToSymbol(g_triIdxListTexture_const, &g_triIdxListTexture, sizeof(hipTextureObject_t));
+	(void)hipCreateTextureObject(&g_triIdxListTexture, &resDesc1, &texDesc, NULL);
+	(void)hipMemcpyToSymbol(g_triIdxListTexture_const, &g_triIdxListTexture, sizeof(hipTextureObject_t));
 
 	hipResourceDesc resDesc2 = {};
 	resDesc2.resType = hipResourceTypeLinear;
 	resDesc2.res.linear.desc = channel2desc;
 	resDesc2.res.linear.devPtr = hipBVHlimits;
 	resDesc2.res.linear.sizeInBytes = g_pCFBVH_No*6*sizeof(float);
-	hipCreateTextureObject(&g_pCFBVHlimitsTexture, &resDesc2, &texDesc, NULL);
-	hipMemcpyToSymbol(g_pCFBVHlimitsTexture_const, &g_pCFBVHlimitsTexture, sizeof(hipTextureObject_t));
+	(void)hipCreateTextureObject(&g_pCFBVHlimitsTexture, &resDesc2, &texDesc, NULL);
+	(void)hipMemcpyToSymbol(g_pCFBVHlimitsTexture_const, &g_pCFBVHlimitsTexture, sizeof(hipTextureObject_t));
 
 	hipResourceDesc resDesc3 = {};
 	resDesc3.resType = hipResourceTypeLinear;
 	resDesc3.res.linear.desc = channel3desc;
 	resDesc3.res.linear.devPtr = hipBVHindexesOrTrilists;
 	resDesc3.res.linear.sizeInBytes = g_pCFBVH_No*sizeof(uint4);
-	hipCreateTextureObject(&g_pCFBVHindexesOrTrilistsTexture, &resDesc3, &texDesc, NULL);
-	hipMemcpyToSymbol(g_pCFBVHindexesOrTrilistsTexture_const, &g_pCFBVHindexesOrTrilistsTexture, sizeof(hipTextureObject_t));
+	(void)hipCreateTextureObject(&g_pCFBVHindexesOrTrilistsTexture, &resDesc3, &texDesc, NULL);
+	(void)hipMemcpyToSymbol(g_pCFBVHindexesOrTrilistsTexture_const, &g_pCFBVHindexesOrTrilistsTexture, sizeof(hipTextureObject_t));
 
 	hipResourceDesc resDesc4 = {};
 	resDesc4.resType = hipResourceTypeLinear;
 	resDesc4.res.linear.desc = channel4desc;
 	resDesc4.res.linear.devPtr = hipPtrVertices;
 	resDesc4.res.linear.sizeInBytes = g_verticesNo*8*sizeof(float);
-	hipCreateTextureObject(&g_verticesTexture, &resDesc4, &texDesc, NULL);
-	hipMemcpyToSymbol(g_verticesTexture_const, &g_verticesTexture, sizeof(hipTextureObject_t));
+	(void)hipCreateTextureObject(&g_verticesTexture, &resDesc4, &texDesc, NULL);
+	(void)hipMemcpyToSymbol(g_verticesTexture_const, &g_verticesTexture, sizeof(hipTextureObject_t));
 
 	hipResourceDesc resDesc5 = {};
 	resDesc5.resType = hipResourceTypeLinear;
 	resDesc5.res.linear.desc = channel5desc;
 	resDesc5.res.linear.devPtr = hipTriangleIntersectionData;
 	resDesc5.res.linear.sizeInBytes = g_trianglesNo*20*sizeof(float);
-	hipCreateTextureObject(&g_trianglesTexture, &resDesc5, &texDesc, NULL);
-	hipMemcpyToSymbol(g_trianglesTexture_const, &g_trianglesTexture, sizeof(hipTextureObject_t));
+	(void)hipCreateTextureObject(&g_trianglesTexture, &resDesc5, &texDesc, NULL);
+	(void)hipMemcpyToSymbol(g_trianglesTexture_const, &g_trianglesTexture, sizeof(hipTextureObject_t));
     }
 
     if (g_bUsePoints) {
-	hipMemset(hipPixels, 0x40, MAXX*MAXY*sizeof(unsigned));
+	(void)hipMemset(hipPixels, 0x40, MAXX*MAXY*sizeof(unsigned));
 	int blocksVertices = (g_verticesNo + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 	CoreLoopVertices<<< blocksVertices, THREADS_PER_BLOCK >>>(
 	    hipPixels, hipWorldToCameraSpace, hipEyePosInWorldSpace);
@@ -780,10 +781,10 @@ void HipRender(
 	exit(-1);
     }
 
-    hipDeviceSynchronize();
+    (void)hipDeviceSynchronize();
 }
 
 void setHipConstants() {
-    hipMemcpyToSymbol(VERTICES, &g_verticesNo, sizeof(int));
-    hipMemcpyToSymbol(TRIANGLES, &g_trianglesNo, sizeof(int));
+    (void)hipMemcpyToSymbol(VERTICES, &g_verticesNo, sizeof(int));
+    (void)hipMemcpyToSymbol(TRIANGLES, &g_trianglesNo, sizeof(int));
 }
