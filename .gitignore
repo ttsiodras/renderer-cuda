@@ -28,3 +28,10 @@ src/cudaRenderer
 src/stamp-h1
 tags
 **/*bvh
+**/*~
+config.h
+stamp-h1
+**/.deps
+configure
+**/realtime_raytracer
+**/.dirstamp

@@ -13,11 +13,24 @@ The code has 3 dependencies: You must install...
     - OpenGL with GLEW and GLUT (e.g. apt install libglew-dev )
     - libSDL (e.g. apt install libsdl1.2-dev or libsdl2-dev )
 
-...and of course, all the CUDA parts. After installing the dependencies, a simple...
+...and of course, the GPU parts. The build system auto-detects CUDA or ROCm/HIP.
+To explicitly enable ROCm/HIP: 
 
-    ./configure && make && ./src/cudaRenderer 3D-objects/chessboard.tri
+    ./configure --enable-rocm 
 
-...will show you a nice raytraced rotating chessboard.
+To force CUDA:
+
+    ./configure --enable-cuda
+
+After installing the dependencies, a simple...
+
+    ./configure && make && ./src/cuda/realtime_raytracer 3D-objects/chessboard.tri  
+
+or...
+
+    ./configure && make && ./src/rocm_hip/realtime_raytracer 3D-objects/chessboard.tri  
+
+...will show you a nice real-time raytraced rotating chessboard.
 
 Read below for keyboard control intructions, or just press 'H' for help.
 
@@ -46,7 +59,13 @@ Since it reports frame rate at the end, you can use this as a benchmark
 for CUDA cards. Just spawn with "-b" to request benchmarking:
 (Note: keys don't work in benchmarking mode)
 
-    ./src/cudaRenderer -b 150 3D-objects/chessboard.tri
+    ./src/cuda/realtime_raytracer -b 150 3D-objects/chessboard.tri   # CUDA benchmark
+
+...or...
+
+    ./src/rocm_hip/realtime_raytracer -b 150 3D-objects/chessboard.tri
+
+...for a ROCm/HIP benchmark.
 
 This will draw 150 frames and report speed back. 14 years ago, my
 GT240 reported:

@@ -1,6 +1,7 @@
 DISTCLEANFILES = *~ *.~*
+AUTOMAKE_OPTIONS = subdir-objects
 
-SUBDIRS = @subdirs@ src
+SUBDIRS = lib3ds-1.3.0 $(backend_dir)
 
 EXTRA_DIST = README COPYING INSTALL AUTHORS NEWS ChangeLog \
 	3D-objects/trainColor.ply 3D-objects/chessboard.tri \
@@ -68,4 +69,4 @@ EXTRA_DIST = README COPYING INSTALL AUTHORS NEWS ChangeLog \
 	VisualC/libSDL/lib/SDLmain.lib
 
 bench:
-	make -C src bench
+	make -C $(backend_dir) bench

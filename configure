@@ -727,6 +727,11 @@ build_os
 build_vendor
 build_cpu
 build
+HIP_LIBS
+HIP_CFLAGS
+BACKEND
+backend_dir
+HIPCC
 NVCCFLAGS
 NVCC
 CUDA_LIBS
@@ -782,6 +787,8 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 with_cuda
+enable_cuda
+enable_rocm
 enable_dependency_tracking
 enable_silent_rules
 with_x
@@ -1439,6 +1446,8 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --enable-cuda           build with CUDA (default auto-detect)
+  --enable-rocm           build with ROCm/HIP (default auto-detect)
   --enable-dependency-tracking
                           do not reject slow dependency extractors
   --disable-dependency-tracking
@@ -3118,7 +3127,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-ac_config_headers="$ac_config_headers src/config.h"
+ac_config_headers="$ac_config_headers config.h"
 
 
 
@@ -4292,22 +4301,189 @@ NVCCFLAGS="-O2 -use_fast_math --compiler-options -fno-inline -I ."
 
 OLDCFLAGS="$CFLAGS"
 OLDCPPFLAGS="$CPPFLAGS"
-CFLAGS="$CUDA_CFLAGS"
-CPPFLAGS="$CUDA_CFLAGS"
-ac_fn_c_check_header_compile "$LINENO" "cuda.h" "ac_cv_header_cuda_h" "$ac_includes_default"
-if test "x$ac_cv_header_cuda_h" = xyes
-then :
-
-else $as_nop
-  as_fn_error $? "Sorry, CUDA SDK appears to be missing" "$LINENO" 5
-fi
-
 CFLAGS="$OLDCFLAGS"
 CPPFLAGS="$OLDCPPFLAGS"
 
 
 
 
+
+# Options for selecting backend
+# Check whether --enable-cuda was given.
+if test ${enable_cuda+y}
+then :
+  enableval=$enable_cuda; enable_cuda=$enableval
+else $as_nop
+  enable_cuda=auto
+fi
+
+# Check whether --enable-rocm was given.
+if test ${enable_rocm+y}
+then :
+  enableval=$enable_rocm; enable_rocm=$enableval
+else $as_nop
+  enable_rocm=auto
+fi
+
+
+# Detect CUDA (if enabled)
+if test "x$enable_cuda" != "xno"; then
+  # Extract the first word of "nvcc", so it can be a program name with args.
+set dummy nvcc; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_NVCC+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  case $NVCC in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_NVCC="$NVCC" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_NVCC="$as_dir$ac_word$ac_exec_ext"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+NVCC=$ac_cv_path_NVCC
+if test -n "$NVCC"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $NVCC" >&5
+printf "%s\n" "$NVCC" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+
+  if test -n "$NVCC"; then
+    HAVE_CUDA=yes
+  else
+    HAVE_CUDA=no
+  fi
+else
+  HAVE_CUDA=no
+fi
+
+# Detect HIP (ROCm) if enabled
+if test "x$enable_rocm" != "xno"; then
+  # Extract the first word of "hipcc", so it can be a program name with args.
+set dummy hipcc; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_HIPCC+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  case $HIPCC in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_HIPCC="$HIPCC" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_HIPCC="$as_dir$ac_word$ac_exec_ext"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+HIPCC=$ac_cv_path_HIPCC
+if test -n "$HIPCC"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $HIPCC" >&5
+printf "%s\n" "$HIPCC" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+
+  if test -n "$HIPCC"; then
+    HAVE_HIP=yes
+    # Basic flags; can be overridden by environment variables
+    HIP_CFLAGS="-I$(dirname $HIPCC)/../include"
+    HIP_LIBS="-L$(dirname $HIPCC)/../lib -lhipblas -lamdhip64"
+  else
+    HAVE_HIP=no
+  fi
+else
+  HAVE_HIP=no
+fi
+
+# Determine which backend to use
+if test "x$enable_cuda" = "yes" && test "x$enable_rocm" = "yes"; then
+  as_fn_error $? "Both --enable-cuda and --enable-rocm are set; please choose only one" "$LINENO" 5
+fi
+if test "x$enable_cuda" = "yes"; then
+  BACKEND=cuda
+elif test "x$enable_rocm" = "yes"; then
+  BACKEND=rocm
+else
+  # Auto-detect
+  if test "$HAVE_CUDA" = "yes"; then
+    BACKEND=cuda
+  elif test "$HAVE_HIP" = "yes"; then
+    BACKEND=rocm
+  else
+    as_fn_error $? "Neither CUDA nor ROCm/HIP toolchains were found. Use --enable-cuda or --enable-rocm" "$LINENO" 5
+  fi
+fi
+
+if test "$BACKEND" = "cuda"; then
+  BACKEND_DIR=src/cuda
+else
+  BACKEND_DIR=src/rocm_hip
+fi
+backend_dir=$BACKEND_DIR
+
+
+
+
+
+
+
+# Define macros for backend presence
+if test "$HAVE_CUDA" = "yes"; then
+
+printf "%s\n" "#define HAVE_CUDA 1" >>confdefs.h
+
+fi
+if test "$HAVE_HIP" = "yes"; then
+
+printf "%s\n" "#define HAVE_HIP 1" >>confdefs.h
+
+fi
 
 # Detect the canonical host and target build environment
 
@@ -6571,343 +6747,8 @@ fi
 	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $HAVESSSE3" >&5
 printf "%s\n" "$HAVESSSE3" >&6; }
 
-	if test x"${HAVESSE}" = xyes ; then
-	    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking CXXFLAGS for gcc -msse" >&5
-printf %s "checking CXXFLAGS for gcc -msse... " >&6; }
-if test ${ax_cv_cxxflags_gcc_option__msse+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ax_cv_cxxflags_gcc_option__msse="no, unknown"
-
- ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
- ac_save_CXXFLAGS="$CXXFLAGS"
-for ac_arg in "-pedantic -Werror % -msse"     "-pedantic % -msse %% no, obsolete"     #
-do CXXFLAGS="$ac_save_CXXFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
-   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main (void)
-{
-return 0;
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_compile "$LINENO"
-then :
-  ax_cv_cxxflags_gcc_option__msse=`echo $ac_arg | sed -e 's,.*% *,,'`; break
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-done
- CXXFLAGS="$ac_save_CXXFLAGS"
- ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cxxflags_gcc_option__msse" >&5
-printf "%s\n" "$ax_cv_cxxflags_gcc_option__msse" >&6; }
-var=$ax_cv_cxxflags_gcc_option__msse
-case ".$var" in
-     .ok|.ok,*)  ;;
-   .|.no|.no,*)  ;;
-   *)
-   if echo " $CXXFLAGS " | grep " $var " 2>&1 >/dev/null
-   then { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CXXFLAGS does contain \$var"; } >&5
-  (: CXXFLAGS does contain $var) 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }
-   else { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CXXFLAGS=\"\$CXXFLAGS \$var\""; } >&5
-  (: CXXFLAGS="$CXXFLAGS $var") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }
-                      CXXFLAGS="$CXXFLAGS $var"
-   fi
- ;;
-esac
-
-	    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking CXXFLAGS for gcc -mrecip" >&5
-printf %s "checking CXXFLAGS for gcc -mrecip... " >&6; }
-if test ${ax_cv_cxxflags_gcc_option__mrecip+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ax_cv_cxxflags_gcc_option__mrecip="no, unknown"
-
- ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
- ac_save_CXXFLAGS="$CXXFLAGS"
-for ac_arg in "-pedantic -Werror % -mrecip"     "-pedantic % -mrecip %% no, obsolete"     #
-do CXXFLAGS="$ac_save_CXXFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
-   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main (void)
-{
-return 0;
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_compile "$LINENO"
-then :
-  ax_cv_cxxflags_gcc_option__mrecip=`echo $ac_arg | sed -e 's,.*% *,,'`; break
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-done
- CXXFLAGS="$ac_save_CXXFLAGS"
- ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cxxflags_gcc_option__mrecip" >&5
-printf "%s\n" "$ax_cv_cxxflags_gcc_option__mrecip" >&6; }
-var=$ax_cv_cxxflags_gcc_option__mrecip
-case ".$var" in
-     .ok|.ok,*)  ;;
-   .|.no|.no,*)  ;;
-   *)
-   if echo " $CXXFLAGS " | grep " $var " 2>&1 >/dev/null
-   then { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CXXFLAGS does contain \$var"; } >&5
-  (: CXXFLAGS does contain $var) 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }
-   else { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CXXFLAGS=\"\$CXXFLAGS \$var\""; } >&5
-  (: CXXFLAGS="$CXXFLAGS $var") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }
-                      CXXFLAGS="$CXXFLAGS $var"
-   fi
- ;;
-esac
-
-	    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking CXXFLAGS for gcc -mfpmath=sse" >&5
-printf %s "checking CXXFLAGS for gcc -mfpmath=sse... " >&6; }
-if test ${ax_cv_cxxflags_gcc_option__mfpmath_sse+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ax_cv_cxxflags_gcc_option__mfpmath_sse="no, unknown"
-
- ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
- ac_save_CXXFLAGS="$CXXFLAGS"
-for ac_arg in "-pedantic -Werror % -mfpmath=sse"     "-pedantic % -mfpmath=sse %% no, obsolete"     #
-do CXXFLAGS="$ac_save_CXXFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
-   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main (void)
-{
-return 0;
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_compile "$LINENO"
-then :
-  ax_cv_cxxflags_gcc_option__mfpmath_sse=`echo $ac_arg | sed -e 's,.*% *,,'`; break
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-done
- CXXFLAGS="$ac_save_CXXFLAGS"
- ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cxxflags_gcc_option__mfpmath_sse" >&5
-printf "%s\n" "$ax_cv_cxxflags_gcc_option__mfpmath_sse" >&6; }
-var=$ax_cv_cxxflags_gcc_option__mfpmath_sse
-case ".$var" in
-     .ok|.ok,*)  ;;
-   .|.no|.no,*)  ;;
-   *)
-   if echo " $CXXFLAGS " | grep " $var " 2>&1 >/dev/null
-   then { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CXXFLAGS does contain \$var"; } >&5
-  (: CXXFLAGS does contain $var) 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }
-   else { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CXXFLAGS=\"\$CXXFLAGS \$var\""; } >&5
-  (: CXXFLAGS="$CXXFLAGS $var") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }
-                      CXXFLAGS="$CXXFLAGS $var"
-   fi
- ;;
-esac
-
-	fi
-	if test x"${HAVESSE2}" = xyes ; then
-	    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking CXXFLAGS for gcc -msse2" >&5
-printf %s "checking CXXFLAGS for gcc -msse2... " >&6; }
-if test ${ax_cv_cxxflags_gcc_option__msse2+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ax_cv_cxxflags_gcc_option__msse2="no, unknown"
-
- ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
- ac_save_CXXFLAGS="$CXXFLAGS"
-for ac_arg in "-pedantic -Werror % -msse2"     "-pedantic % -msse2 %% no, obsolete"     #
-do CXXFLAGS="$ac_save_CXXFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
-   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main (void)
-{
-return 0;
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_compile "$LINENO"
-then :
-  ax_cv_cxxflags_gcc_option__msse2=`echo $ac_arg | sed -e 's,.*% *,,'`; break
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-done
- CXXFLAGS="$ac_save_CXXFLAGS"
- ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cxxflags_gcc_option__msse2" >&5
-printf "%s\n" "$ax_cv_cxxflags_gcc_option__msse2" >&6; }
-var=$ax_cv_cxxflags_gcc_option__msse2
-case ".$var" in
-     .ok|.ok,*)  ;;
-   .|.no|.no,*)  ;;
-   *)
-   if echo " $CXXFLAGS " | grep " $var " 2>&1 >/dev/null
-   then { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CXXFLAGS does contain \$var"; } >&5
-  (: CXXFLAGS does contain $var) 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }
-   else { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CXXFLAGS=\"\$CXXFLAGS \$var\""; } >&5
-  (: CXXFLAGS="$CXXFLAGS $var") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }
-                      CXXFLAGS="$CXXFLAGS $var"
-   fi
- ;;
-esac
-
-	fi
-	if test x"${HAVESSSE3}" = xyes ; then
-	    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking CXXFLAGS for gcc -mssse3" >&5
-printf %s "checking CXXFLAGS for gcc -mssse3... " >&6; }
-if test ${ax_cv_cxxflags_gcc_option__mssse3+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ax_cv_cxxflags_gcc_option__mssse3="no, unknown"
-
- ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
- ac_save_CXXFLAGS="$CXXFLAGS"
-for ac_arg in "-pedantic -Werror % -mssse3"     "-pedantic % -mssse3 %% no, obsolete"     #
-do CXXFLAGS="$ac_save_CXXFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
-   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main (void)
-{
-return 0;
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_compile "$LINENO"
-then :
-  ax_cv_cxxflags_gcc_option__mssse3=`echo $ac_arg | sed -e 's,.*% *,,'`; break
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-done
- CXXFLAGS="$ac_save_CXXFLAGS"
- ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cxxflags_gcc_option__mssse3" >&5
-printf "%s\n" "$ax_cv_cxxflags_gcc_option__mssse3" >&6; }
-var=$ax_cv_cxxflags_gcc_option__mssse3
-case ".$var" in
-     .ok|.ok,*)  ;;
-   .|.no|.no,*)  ;;
-   *)
-   if echo " $CXXFLAGS " | grep " $var " 2>&1 >/dev/null
-   then { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CXXFLAGS does contain \$var"; } >&5
-  (: CXXFLAGS does contain $var) 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }
-   else { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: : CXXFLAGS=\"\$CXXFLAGS \$var\""; } >&5
-  (: CXXFLAGS="$CXXFLAGS $var") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }
-                      CXXFLAGS="$CXXFLAGS $var"
-   fi
- ;;
-esac
-
-	fi
-        CXXFLAGS="$CXXFLAGS -DNDEBUG"
+	# SSE/CPU specific flags disabled
+	CXXFLAGS="$CXXFLAGS -DNDEBUG"
 fi
 
 
@@ -8280,7 +8121,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
 
 
 # Finally create all the generated files
-ac_config_files="$ac_config_files Makefile src/Makefile"
+ac_config_files="$ac_config_files Makefile src/cuda/Makefile src/rocm_hip/Makefile src/common/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -9006,10 +8847,12 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "src/config.h") CONFIG_HEADERS="$CONFIG_HEADERS src/config.h" ;;
+    "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
-    "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
+    "src/cuda/Makefile") CONFIG_FILES="$CONFIG_FILES src/cuda/Makefile" ;;
+    "src/rocm_hip/Makefile") CONFIG_FILES="$CONFIG_FILES src/rocm_hip/Makefile" ;;
+    "src/common/Makefile") CONFIG_FILES="$CONFIG_FILES src/common/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
@@ -9882,4 +9725,14 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 printf "%s\n" "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
+
+# Final summary printed after everything
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: backend configuration:" >&5
+printf "%s\n" "$as_me: backend configuration:" >&6;}
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}:   CUDA     : $HAVE_CUDA" >&5
+printf "%s\n" "$as_me:   CUDA     : $HAVE_CUDA" >&6;}
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}:   HIP      : $HAVE_HIP" >&5
+printf "%s\n" "$as_me:   HIP      : $HAVE_HIP" >&6;}
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}:   selected : $BACKEND" >&5
+printf "%s\n" "$as_me:   selected : $BACKEND" >&6;}
 

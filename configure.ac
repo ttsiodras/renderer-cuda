@@ -1,6 +1,6 @@
 AC_INIT([cudaRenderer], [2.1k], [ttsiod@softlab.ntua.gr])
 
-AC_CONFIG_HEADERS([src/config.h])
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([ac-macros])
 
 ########################
@@ -45,15 +45,89 @@ NVCCFLAGS="-O2 -use_fast_math --compiler-options -fno-inline -I ."
 
 OLDCFLAGS="$CFLAGS"
 OLDCPPFLAGS="$CPPFLAGS"
-CFLAGS="$CUDA_CFLAGS"
-CPPFLAGS="$CUDA_CFLAGS"
-AC_CHECK_HEADER([cuda.h],,[AC_MSG_ERROR([Sorry, CUDA SDK appears to be missing])])
 CFLAGS="$OLDCFLAGS"
 CPPFLAGS="$OLDCPPFLAGS"
 AC_SUBST(CUDA_CFLAGS)
 AC_SUBST(CUDA_LIBS)
 AC_SUBST(NVCC)
 AC_SUBST(NVCCFLAGS)
+
+# Options for selecting backend
+AC_ARG_ENABLE([cuda],
+  [AS_HELP_STRING([--enable-cuda],[build with CUDA (default auto-detect)])],
+  [enable_cuda=$enableval],
+  [enable_cuda=auto])
+AC_ARG_ENABLE([rocm],
+  [AS_HELP_STRING([--enable-rocm],[build with ROCm/HIP (default auto-detect)])],
+  [enable_rocm=$enableval],
+  [enable_rocm=auto])
+
+# Detect CUDA (if enabled)
+if test "x$enable_cuda" != "xno"; then
+  AC_PATH_PROG([NVCC], [nvcc])
+  if test -n "$NVCC"; then
+    HAVE_CUDA=yes
+  else
+    HAVE_CUDA=no
+  fi
+else
+  HAVE_CUDA=no
+fi
+
+# Detect HIP (ROCm) if enabled
+if test "x$enable_rocm" != "xno"; then
+  AC_PATH_PROG([HIPCC], [hipcc])
+  if test -n "$HIPCC"; then
+    HAVE_HIP=yes
+    # Basic flags; can be overridden by environment variables
+    HIP_CFLAGS="-I$(dirname $HIPCC)/../include"
+    HIP_LIBS="-L$(dirname $HIPCC)/../lib -lhipblas -lamdhip64"
+  else
+    HAVE_HIP=no
+  fi
+else
+  HAVE_HIP=no
+fi
+
+# Determine which backend to use
+if test "x$enable_cuda" = "yes" && test "x$enable_rocm" = "yes"; then
+  AC_MSG_ERROR([Both --enable-cuda and --enable-rocm are set; please choose only one])
+fi
+if test "x$enable_cuda" = "yes"; then
+  BACKEND=cuda
+elif test "x$enable_rocm" = "yes"; then
+  BACKEND=rocm
+else
+  # Auto-detect
+  if test "$HAVE_CUDA" = "yes"; then
+    BACKEND=cuda
+  elif test "$HAVE_HIP" = "yes"; then
+    BACKEND=rocm
+  else
+    AC_MSG_ERROR([Neither CUDA nor ROCm/HIP toolchains were found. Use --enable-cuda or --enable-rocm])
+  fi
+fi
+
+if test "$BACKEND" = "cuda"; then
+  BACKEND_DIR=src/cuda
+else
+  BACKEND_DIR=src/rocm_hip
+fi
+backend_dir=$BACKEND_DIR
+AC_SUBST([backend_dir])
+AC_SUBST([BACKEND])
+AC_SUBST([HIPCC])
+AC_SUBST([HIP_CFLAGS])
+AC_SUBST([HIP_LIBS])
+
+
+# Define macros for backend presence
+if test "$HAVE_CUDA" = "yes"; then
+  AC_DEFINE([HAVE_CUDA], [1], [Define if CUDA backend is enabled])
+fi
+if test "$HAVE_HIP" = "yes"; then
+  AC_DEFINE([HAVE_HIP], [1], [Define if HIP backend is enabled])
+fi
 
 # Detect the canonical host and target build environment
 AC_CANONICAL_HOST
@@ -138,18 +212,8 @@ __asm__ volatile ("pabsd %%xmm0, %%xmm0":::"memory"); return 0;
 	])], [HAVESSSE3=yes], [HAVESSSE3=no])
 	AC_MSG_RESULT($HAVESSSE3)
 
-	if test x"${HAVESSE}" = xyes ; then
-	    AX_CXXFLAGS_GCC_OPTION(-msse)
-	    AX_CXXFLAGS_GCC_OPTION(-mrecip)
-	    AX_CXXFLAGS_GCC_OPTION(-mfpmath=sse)
-	fi
-	if test x"${HAVESSE2}" = xyes ; then
-	    AX_CXXFLAGS_GCC_OPTION(-msse2)
-	fi
-	if test x"${HAVESSSE3}" = xyes ; then
-	    AX_CXXFLAGS_GCC_OPTION(-mssse3)
-	fi
-        CXXFLAGS="$CXXFLAGS -DNDEBUG"
+	# SSE/CPU specific flags disabled
+	CXXFLAGS="$CXXFLAGS -DNDEBUG"
 fi
 
 
@@ -207,5 +271,11 @@ AC_SUBST(SDL_CFLAGS)
 AC_SUBST(SDL_LIBS)
 
 # Finally create all the generated files
-AC_CONFIG_FILES([Makefile src/Makefile]) 
+AC_CONFIG_FILES([Makefile src/cuda/Makefile src/rocm_hip/Makefile src/common/Makefile])
 AC_OUTPUT
+
+# Final summary printed after everything
+AC_MSG_NOTICE([backend configuration:])
+AC_MSG_NOTICE([  CUDA     : $HAVE_CUDA])
+AC_MSG_NOTICE([  HIP      : $HAVE_HIP])
+AC_MSG_NOTICE([  selected : $BACKEND])
