@@ -19,13 +19,9 @@
 
 #include "../../config.h"
 
-#ifdef _WIN32
-#include <GL/glew.h>
-#else
 #define GL_GLEXT_PROTOTYPES
 #include <GL/glew.h>
 #include <GL/gl.h>
-#endif
 
 #include <cstdio>
 #include <cstdlib>
@@ -45,12 +41,7 @@
 #include "lib3ds/file.h"
 
 #include "3d.h"
-#if defined(HAVE_CUDA)
-#include "cudarenderer.h"
-#endif
-#if defined(HAVE_HIP)
-#include "hiprenderer_globals.h"
-#endif
+#include "ConstantsAndGlobals.h"
 #include "Utility.h"
 
 #define TRI_MAGIC	0xDEADBEEF

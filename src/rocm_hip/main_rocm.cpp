@@ -19,15 +19,9 @@
 
 // #include "config.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#include <GL/glew.h>
-#include <sstream>
-#else
 #define GL_GLEXT_PROTOTYPES
 #include <GL/glew.h>
 #include <GL/gl.h>
-#endif
 #include <GL/glut.h>
 
 #include <iostream>
@@ -44,7 +38,7 @@
 #include <hip/hip_gl_interop.h>
 
 #define DEFINE_GLOBALS
-#include "hiprenderer_globals.h"
+#include "ConstantsAndGlobals.h"
 
 #include "Clock.h"
 #include "Loader.h"
@@ -339,10 +333,6 @@ int main(int argc, char *argv[])
     ModeDescription();
     watch.reset();
     
-    // Allocate host memory for pixel buffer (debug output disabled)
-
-
-
     while(!keys.Abort()) {
 	framesDrawn++;
 	if (bench && framesDrawn>benchFrames)
@@ -494,7 +484,7 @@ int main(int argc, char *argv[])
 	int* hipPixels = (int*)devPtr;
 
 	// Render directly into PBO memory
-	HipRender(
+	Raytrace(
 	    hipSony,
 	    hipVertices, hipTriangles, hipTriangleIntersectionData,
 	    hipTriIdxList, hipBVHlimits, hipBVHindexesOrTrilists,
@@ -547,15 +537,9 @@ int main(int argc, char *argv[])
     }
     framesDrawn--;
 
-#ifdef _WIN32
-    stringstream speed;
-    speed << "Rendering " << framesDrawn << " frames in " << (watch.readMS()/1000.0) << " seconds. (" << framesDrawn/(watch.readMS()/1000.0) << " fps)\n";
-    MessageBoxA(0, (LPCSTR) speed.str().c_str(), (const char *)"Speed of rendering", MB_OK);
-#else
     cout << "Rendering " << framesDrawn << " frames in ";
     cout << (watch.readMS()/1000.0) << " seconds. (";
     cout << framesDrawn/(watch.readMS()/1000.0) << " fps)\n";
-#endif
 
     SAFE(hipFree(hipMortonTable));
     SAFE(hipFree(hipBVHindexesOrTrilists));

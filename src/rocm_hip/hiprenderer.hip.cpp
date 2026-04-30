@@ -17,13 +17,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef _WIN32
-#include <windows.h>
-#include <GL/glew.h>
-#else
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
-#endif
 #include <GL/glut.h>
 
 #include <SDL.h>
@@ -38,7 +33,8 @@
 #include "Base3d.h"
 #include "Camera.h"
 
-#include "hiprenderer_globals.h"
+#include "ConstantsAndGlobals.h"
+
 #include "hiprenderer.h"
 
 /////////////////////////////////
@@ -623,7 +619,7 @@ __global__ void CoreLoopTrianglesRaycaster(
 
 bool g_bFirstTime = true;
 
-void HipRender(
+void Raytrace(
     Matrix3 *hipWorldToCameraSpace,
     Vertex *hipPtrVertices, Triangle *hipPtrTriangles, float *hipTriangleIntersectionData,
     int *hipTriIdxList, float *hipBVHlimits, int *hipBVHindexesOrTrilists,

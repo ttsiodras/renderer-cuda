@@ -17,13 +17,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef _WIN32
-#include <windows.h>
-#include <GL/glew.h>
-#else
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
-#endif
 #include <GL/glut.h>
 
 #include <SDL.h>
@@ -857,7 +852,7 @@ __global__ void CoreLoopTrianglesRaycaster(
 
 bool g_bFirstTime = true;
 
-void CudaRender(
+void Raytrace(
     Matrix3 *cudaWorldToCameraSpace,
     Vertex *cudaPtrVertices, Triangle *cudaPtrTriangles, float *cudaTriangleIntersectionData,
     int *cudaTriIdxList, float *cudaBVHlimits, int *cudaBVHindexesOrTrilists,
@@ -876,7 +871,7 @@ void CudaRender(
 	cudaChannelFormatDesc channel5desc = cudaCreateChannelDesc<float4>();
 
 	// Texture descriptor for 1D textures (CUDA 13.0+ API)
-cudaTextureDesc texDesc = {};
+        cudaTextureDesc texDesc = {};
 	texDesc.addressMode[0] = cudaAddressModeClamp;
 	texDesc.addressMode[1] = cudaAddressModeClamp;
 	texDesc.addressMode[2] = cudaAddressModeClamp;
@@ -897,7 +892,7 @@ cudaTextureDesc texDesc = {};
 	texDesc.borderColor[3] = 0.0f;
 
 	// Create texture objects for triIdxList
-cudaResourceDesc resDesc1 = {};
+        cudaResourceDesc resDesc1 = {};
 	resDesc1.resType = cudaResourceTypeLinear;
 	resDesc1.res.linear.desc = channel1desc;
 	resDesc1.res.linear.devPtr = cudaTriIdxList;
@@ -906,7 +901,7 @@ cudaResourceDesc resDesc1 = {};
 	SAFE(cudaMemcpyToSymbol(g_triIdxListTexture_const, &g_triIdxListTexture, sizeof(cudaTextureObject_t)));
 
 	// Create texture objects for BVH limits
-cudaResourceDesc resDesc2 = {};
+        cudaResourceDesc resDesc2 = {};
 	resDesc2.resType = cudaResourceTypeLinear;
 	resDesc2.res.linear.desc = channel2desc;
 	resDesc2.res.linear.devPtr = cudaBVHlimits;
@@ -915,7 +910,7 @@ cudaResourceDesc resDesc2 = {};
 	SAFE(cudaMemcpyToSymbol(g_pCFBVHlimitsTexture_const, &g_pCFBVHlimitsTexture, sizeof(cudaTextureObject_t)));
 
 	// Create texture objects for BVH indexes/trilists
-cudaResourceDesc resDesc3 = {};
+        cudaResourceDesc resDesc3 = {};
 	resDesc3.resType = cudaResourceTypeLinear;
 	resDesc3.res.linear.desc = channel3desc;
 	resDesc3.res.linear.devPtr = cudaBVHindexesOrTrilists;
@@ -924,7 +919,7 @@ cudaResourceDesc resDesc3 = {};
 	SAFE(cudaMemcpyToSymbol(g_pCFBVHindexesOrTrilistsTexture_const, &g_pCFBVHindexesOrTrilistsTexture, sizeof(cudaTextureObject_t)));
 
 	// Create texture objects for vertices
-cudaResourceDesc resDesc4 = {};
+        cudaResourceDesc resDesc4 = {};
 	resDesc4.resType = cudaResourceTypeLinear;
 	resDesc4.res.linear.desc = channel4desc;
 	resDesc4.res.linear.devPtr = cudaPtrVertices;
@@ -933,7 +928,7 @@ cudaResourceDesc resDesc4 = {};
 	SAFE(cudaMemcpyToSymbol(g_verticesTexture_const, &g_verticesTexture, sizeof(cudaTextureObject_t)));
 
 	// Create texture objects for triangles
-cudaResourceDesc resDesc5 = {};
+        cudaResourceDesc resDesc5 = {};
 	resDesc5.resType = cudaResourceTypeLinear;
 	resDesc5.res.linear.desc = channel5desc;
 	resDesc5.res.linear.devPtr = cudaTriangleIntersectionData;

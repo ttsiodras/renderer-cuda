@@ -21,7 +21,7 @@
 #define HIPRENDERER_H
 
 // HIP renderer functions
-void HipRender(
+void Raytrace(
     Matrix3 *hipWorldToCameraSpace,
     Vertex *hipPtrVertices, Triangle *hipPtrTriangles, float *hipTriangleIntersectionData,
     int *hipTriIdxList, float *hipBVHlimits, int *hipBVHindexesOrTrilists,

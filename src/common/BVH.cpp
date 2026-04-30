@@ -25,26 +25,16 @@
 
 #include "../../config.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#include <GL/glew.h>
-#else
 #define GL_GLEXT_PROTOTYPES
 #include <GL/glew.h>
 #include <GL/gl.h>
-#endif
 #include <GL/glut.h>
 
 #include "BVH.h"
 #include "Base3d.h"
 #include "Clock.h"
 
-#if defined(HAVE_CUDA)
-#include "cudarenderer.h"
-#endif
-#if defined(HAVE_HIP)
-#include "hiprenderer_globals.h"
-#endif
+#include "ConstantsAndGlobals.h"
 
 #include <algorithm>
 #include <vector>

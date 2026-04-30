@@ -17,10 +17,9 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __HIP_RENDERER_GLOBALS_H__
-#define __HIP_RENDERER_GLOBALS_H__
+#pragma once
 
-#include <hip/hip_runtime.h>
+#include "../../config.h"
 
 #include "Types.h"
 #include "Keyboard.h"
@@ -30,8 +29,11 @@
 
 // Constants
 
-#define MAXX		1200
-#define MAXY		900
+// I cannot use C++ constants for these, since I am using them to allocate
+// stack arrays or shared memory in CUDA kernels.
+
+#define MAXX		800
+#define MAXY		600
 #define SCREEN_DIST     (MAXY*2)
 
 #define AMBIENT		96.f
@@ -40,6 +42,8 @@
 
 #define FOV		1024
 
+// Maximum allowed depth of BVH
+// Checked at BVH build time, no runtime crash possible, see CreateCFBVH()
 #define BVH_STACK_SIZE 32
 
 // Debugging helpers
@@ -52,7 +56,15 @@
 #define DBG_PUTS(level, msg) \
     do { if (level <= DEBUG_LEVEL) { puts(msg); fflush(stdout); }} while (0)
 
-// HIP error handling macro
+#ifdef HAVE_CUDA
+#  define SAFE_NO_SYNC( call ) {                                     \
+    cudaError_t err = call;                                                  \
+    if( cudaSuccess != err) {                                               \
+        fprintf(stderr, "Cuda driver error '%s'\n in file '%s' in line %i.\n",   \
+                cudaGetErrorString(err), __FILE__, __LINE__ );                                   \
+        exit(EXIT_FAILURE);                                                  \
+    } }
+#else
 #define SAFE_NO_SYNC( call ) {                                     \
     hipError_t err = call;                                          \
     if( hipSuccess != err) {                                         \
@@ -60,8 +72,9 @@
                 hipGetErrorString(err), __FILE__, __LINE__ );        \
         exit(EXIT_FAILURE);                                         \
     } }
+#endif
 
-#define SAFE( call )       SAFE_NO_SYNC(call);
+#  define SAFE( call )       SAFE_NO_SYNC(call);
 
 // Macro for global variables
 
@@ -98,4 +111,11 @@ DECLARE_DEFINE_GLOBAL(int*, g_triIndexList, NULL);
 DECLARE_DEFINE_GLOBAL(unsigned, g_pCFBVH_No, 0);
 DECLARE_DEFINE_GLOBAL(CacheFriendlyBVHNode*, g_pCFBVH, NULL);
 
-#endif /* __HIP_RENDERER_GLOBALS_H__ */
+void Raytrace(
+    Matrix3 *pMv,
+    Vertex *cudaPtrVertices, Triangle *cudaPtrTriangles, float *cudaTriangleIntersectionData,
+    int *cudaTriIdxList, float *cudaBVHlimits, int *cudaBVHindexesOrTrilists,
+    Vector3 *eye, Vector3 *pLightInWorldSpace,
+    unsigned *cudaMortonTable);
+
+void setConstants();
