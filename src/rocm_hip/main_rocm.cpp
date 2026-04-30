@@ -54,24 +54,15 @@ using namespace std;
 
 void create_texture(GLuint* tex)
 {
-    // Create test pixels (solid color to verify texture works)
-    unsigned char *testPixels = (unsigned char*)malloc(MAXX*MAXY*4);
-    for(unsigned i = 0; i < MAXX*MAXY; i++) {
-        testPixels[i*4+0] = 128;  // R
-        testPixels[i*4+1] = 64;   // G
-        testPixels[i*4+2] = 32;   // B
-        testPixels[i*4+3] = 255;  // A
-    }
-    
+    unsigned char *pixels = (unsigned char*)malloc(MAXX*MAXY*4);
     glGenTextures(1, tex);
     glBindTexture(GL_TEXTURE_2D, *tex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, MAXX, MAXY, 0, GL_RGBA, GL_UNSIGNED_BYTE, testPixels);
-    
-    free(testPixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, MAXX, MAXY, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    free(pixels);
     
     // Check for OpenGL errors
     GLenum err = glGetError();

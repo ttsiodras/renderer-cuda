@@ -35,3 +35,4 @@ stamp-h1
 configure
 **/realtime_raytracer
 **/.dirstamp
+compile_commands.json

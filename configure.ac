@@ -1,13 +1,8 @@
-AC_INIT([cudaRenderer], [2.1k], [ttsiod@softlab.ntua.gr])
+AC_INIT([RealtimeRaytracer], [3.0], [ttsiodras@gmail.com])
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([ac-macros])
 
-########################
-# Check for CUDA
-########################
-
-# Ticket #3 - adapt to 64bit builds
 AC_CHECK_SIZEOF([long])
 if test "$ac_cv_sizeof_long" -eq 8 ; then
     SUFFIX64="64"

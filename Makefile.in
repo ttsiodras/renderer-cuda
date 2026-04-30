@@ -343,7 +343,6 @@ DISTCLEANFILES = *~ *.~*
 AUTOMAKE_OPTIONS = subdir-objects
 SUBDIRS = lib3ds-1.3.0 $(backend_dir)
 EXTRA_DIST = README COPYING INSTALL AUTHORS NEWS ChangeLog \
-	3D-objects/trainColor.ply 3D-objects/chessboard.tri \
 	contrib/tryCombinations.py
 
 all: config.h
@@ -565,6 +564,9 @@ distdir-am: $(DISTFILES)
 	      || exit 1; \
 	  fi; \
 	done
+	$(MAKE) $(AM_MAKEFLAGS) \
+	  top_distdir="$(top_distdir)" distdir="$(distdir)" \
+	  dist-hook
 	-test -n "$(am__skip_mode_fix)" \
 	|| find "$(distdir)" -type d ! -perm -755 \
 		-exec chmod u+rwx,go+rx {} \; -o \
@@ -818,21 +820,32 @@ uninstall-am:
 .PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am \
 	am--refresh check check-am clean clean-cscope clean-generic \
 	cscope cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
-	dist-bzip3 dist-gzip dist-lzip dist-shar dist-tarZ dist-xz \
-	dist-zip dist-zstd distcheck distclean distclean-generic \
-	distclean-hdr distclean-tags distcleancheck distdir \
-	distuninstallcheck dvi dvi-am html html-am info info-am \
-	install install-am install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am install-man \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	installdirs-am maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-generic pdf pdf-am ps ps-am tags \
-	tags-am uninstall uninstall-am
+	dist-bzip3 dist-gzip dist-hook dist-lzip dist-shar dist-tarZ \
+	dist-xz dist-zip dist-zstd distcheck distclean \
+	distclean-generic distclean-hdr distclean-tags distcleancheck \
+	distdir distuninstallcheck dvi dvi-am html html-am info \
+	info-am install install-am install-data install-data-am \
+	install-dvi install-dvi-am install-exec install-exec-am \
+	install-html install-html-am install-info install-info-am \
+	install-man install-pdf install-pdf-am install-ps \
+	install-ps-am install-strip installcheck installcheck-am \
+	installdirs installdirs-am maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-generic pdf \
+	pdf-am ps ps-am tags tags-am uninstall uninstall-am
 
 .PRECIOUS: Makefile
 
+
+dist-hook:
+	mkdir -p $(distdir)/3D-objects/
+	cp 3D-objects/*.ply $(distdir)/3D-objects/
+	cp 3D-objects/*.tri $(distdir)/3D-objects/
+	mkdir -p $(distdir)/src/cuda/
+	cp src/cuda/Makefile.* src/cuda/*cpp src/cuda/*cu $(distdir)/src/cuda/
+	mkdir -p $(distdir)/src/rocm_hip
+	cp src/rocm_hip/Makefile.* src/rocm_hip/*h src/rocm_hip/*pp $(distdir)/src/rocm_hip/
+	mkdir -p $(distdir)/src/common
+	cp src/common/Makefile.am src/common/Makefile.in src/common/*cpp src/common/*h $(distdir)/src/common/
 
 bench:
 	make -C $(backend_dir) bench
