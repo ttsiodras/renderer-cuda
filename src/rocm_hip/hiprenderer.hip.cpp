@@ -39,7 +39,7 @@
 
 /////////////////////////////////
 // Raytracing configuration
-#define THREADS_PER_BLOCK   64
+#define THREADS_PER_BLOCK   32
 
 // What depth to stop reflections and refractions?
 #define MAX_RAY_DEPTH	    2
