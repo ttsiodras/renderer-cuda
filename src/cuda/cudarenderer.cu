@@ -34,7 +34,7 @@
 #include "Base3d.h"
 #include "Camera.h"
 
-#include "cudarenderer.h"
+#include "ConstantsAndGlobals.h"
 
 /////////////////////////////////
 // Raytracing configuration

@@ -38,7 +38,7 @@
 #include <cuda_gl_interop.h>
 
 #define DEFINE_GLOBALS
-#include "cudarenderer.h"
+#include "ConstantsAndGlobals.h"
 
 #include "Clock.h"
 #include "Loader.h"
@@ -503,7 +503,7 @@ int main(int argc, char *argv[])
 	SAFE( cudaMemcpy(cudaSony, &sony._mv, sizeof(sony._mv), cudaMemcpyHostToDevice) );
 
 	// ...and render!
-	CudaRender(
+	Raytrace(
 	    cudaSony,
 	    cudaVertices, cudaTriangles, cudaTriangleIntersectionData,
 	    cudaTriIdxList, cudaBVHlimits, cudaBVHindexesOrTrilists,
