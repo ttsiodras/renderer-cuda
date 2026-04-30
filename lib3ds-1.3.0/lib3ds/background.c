@@ -25,20 +25,6 @@
 #include <string.h>
 #include <math.h>
 
-static Lib3dsBool colorf_write(Lib3dsRgba rgb, Lib3dsIo *io);
-static Lib3dsBool colorf_defined(Lib3dsRgba rgb);
-
-static void colorf_write_rgb(const Lib3dsRgb src, Lib3dsIo *io) {
-
-    Lib3dsRgba tmp = {src[0], src[1], src[2], 1.0f};
-    colorf_write(tmp, io);
-}
-
-static Lib3dsBool colorf_defined_rgb(const Lib3dsRgb rgb) {
-    Lib3dsRgba tmp = {rgb[0], rgb[1], rgb[2], 1.0f};
-    return colorf_defined(tmp);
-}
-
 
 /*!
  * \defgroup background Background Settings
@@ -178,7 +164,7 @@ lib3ds_background_read(Lib3dsBackground *background, Lib3dsIo *io)
 
 
 static Lib3dsBool
-colorf_write(Lib3dsRgba rgb, Lib3dsIo *io)
+colorf_write(Lib3dsRgb rgb, Lib3dsIo *io)
 {
   Lib3dsChunk c;
 
@@ -196,7 +182,7 @@ colorf_write(Lib3dsRgba rgb, Lib3dsIo *io)
 
 
 static Lib3dsBool
-colorf_defined(Lib3dsRgba rgb)
+colorf_defined(Lib3dsRgb rgb)
 {
   int i;
   for (i=0; i<3; ++i) {
@@ -222,25 +208,25 @@ lib3ds_background_write(Lib3dsBackground *background, Lib3dsIo *io)
     lib3ds_io_write_string(io, background->bitmap.name);
   }
 
-  if (colorf_defined_rgb(background->solid.col)) { /*---- LIB3DS_SOLID_BGND ----*/
+  if (colorf_defined(background->solid.col)) { /*---- LIB3DS_SOLID_BGND ----*/
     Lib3dsChunk c;
     c.chunk=LIB3DS_SOLID_BGND;
     c.size=42;
     lib3ds_chunk_write(&c,io);
-    colorf_write_rgb(background->solid.col, io);
+    colorf_write(background->solid.col, io);
   }
 
-  if (colorf_defined_rgb(background->gradient.top) ||
-    colorf_defined_rgb(background->gradient.middle) ||
-    colorf_defined_rgb(background->gradient.bottom)) { /*---- LIB3DS_V_GRADIENT ----*/
+  if (colorf_defined(background->gradient.top) ||
+    colorf_defined(background->gradient.middle) ||
+    colorf_defined(background->gradient.bottom)) { /*---- LIB3DS_V_GRADIENT ----*/
     Lib3dsChunk c;
     c.chunk=LIB3DS_V_GRADIENT;
     c.size=118;
     lib3ds_chunk_write(&c,io);
     lib3ds_io_write_float(io, background->gradient.percent);
-    colorf_write_rgb(background->gradient.top,io);
-    colorf_write_rgb(background->gradient.middle,io);
-    colorf_write_rgb(background->gradient.bottom,io);
+    colorf_write(background->gradient.top,io);
+    colorf_write(background->gradient.middle,io);
+    colorf_write(background->gradient.bottom,io);
   }
 
   if (background->bitmap.use) { /*---- LIB3DS_USE_BIT_MAP ----*/

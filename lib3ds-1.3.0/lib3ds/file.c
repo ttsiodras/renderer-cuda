@@ -28,14 +28,6 @@
 #include <lib3ds/light.h>
 #include <lib3ds/node.h>
 #include <lib3ds/matrix.h>
-
-static Lib3dsBool colorf_write(Lib3dsRgba rgb, Lib3dsIo *io);
-
-static void colorf_write_rgb(const Lib3dsRgb src, Lib3dsIo *io) {
-    Lib3dsRgba tmp = {src[0], src[1], src[2], 1.0f};
-    colorf_write(tmp, io);
-}
-
 #include <lib3ds/vector.h>
 #include <stdlib.h>
 #include <string.h>
@@ -818,7 +810,7 @@ lib3ds_file_read(Lib3dsFile *file, Lib3dsIo *io)
 
 
 static Lib3dsBool
-colorf_write(Lib3dsRgba rgb, Lib3dsIo *io)
+colorf_write(Lib3dsRgb rgb, Lib3dsIo *io)
 {
   Lib3dsChunk c;
 
@@ -924,7 +916,7 @@ mdata_write(Lib3dsFile *file, Lib3dsIo *io)
       c.chunk=LIB3DS_AMBIENT_LIGHT;
       c.size=42;
       lib3ds_chunk_write(&c,io);
-      colorf_write_rgb(file->ambient,io);
+      colorf_write(file->ambient,io);
     }
   }
   lib3ds_background_write(&file->background, io);
