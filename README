@@ -30,7 +30,7 @@ or...
 
     ./configure && make && ./src/rocm_hip/realtime_raytracer 3D-objects/chessboard.tri  
 
-...will show you a nice real-time raytraced rotating chessboard.
+...will show you a real-time-raytraced rotating chessboard.
 
 Read below for keyboard control intructions, or just press 'H' for help.
 
@@ -56,25 +56,23 @@ Use the following keys to navigate around the object:
 ## Misc
 
 Since it reports frame rate at the end, you can use this as a benchmark 
-for CUDA cards. Just spawn with "-b" to request benchmarking:
+for CUDA/AMD cards. Just spawn with "-b" to request benchmarking:
 (Note: keys don't work in benchmarking mode)
 
-    ./src/cuda/realtime_raytracer -b 150 3D-objects/chessboard.tri   # CUDA benchmark
+For CUDA builds:
 
-...or...
+    ./src/cuda/realtime_raytracer -b 150 3D-objects/chessboard.tri
+
+For ROCm/HIP builds:
 
     ./src/rocm_hip/realtime_raytracer -b 150 3D-objects/chessboard.tri
 
-...for a ROCm/HIP benchmark.
-
-This will draw 150 frames and report speed back. 14 years ago, my
-GT240 reported:
+This will draw 150 frames and report speed back. 14 years ago (2012),
+my NVIDIA GT240 reported:
 
     Rendering 150 frames in 8.117 seconds. (18.4797 fps)
 
-You can also do this easily via:
+Today, my laptop's (AMD Ryzen 5 7535HS with Radeon 660M Graphics)
+reports ~110 frames per second.
 
-    make bench
-
-Nowadays, I am 100% sure you need far larger objects than the chessboard
-to not get throttled by the 60fps vsync limit :-)
+Clearly, times have changed - we need larger objects :-)
