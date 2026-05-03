@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
     if ( SDL_Init(SDL_INIT_VIDEO) < 0 )
         panic("Couldn't initialize SDL: %s\n", SDL_GetError());
     atexit(SDL_Quit); // Clean up on exit
-    if (!SDL_SetVideoMode( MAXX, MAXY, 0, SDL_OPENGL))
+    if (!SDL_SetVideoMode( MAXX, MAXY, 0, SDL_OPENGL | SDL_RESIZABLE))
         panic("Couldn't set video mode: %s\n", SDL_GetError());
     // Ignore mice, we love keyboards
     SDL_EventState(SDL_MOUSEMOTION, SDL_IGNORE);
