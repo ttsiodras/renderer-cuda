@@ -191,7 +191,8 @@ int main(int argc, char *argv[])
     SAFE( hipMalloc((void**)&hipVertices, g_verticesNo*8*sizeof(float)) );
     SAFE( hipMemcpy(hipVertices, pVerticesData, g_verticesNo*8*sizeof(float), hipMemcpyHostToDevice) );
 
-    float *pTrianglesIntersectionData = (float *)malloc(g_trianglesNo*20*sizeof(float));
+    // Triangle intersection data texture (5 float4s per triangle, stride-5 hot path for BVH)
+    float *pTrianglesIntersectionData = (float *)malloc(g_trianglesNo*5*sizeof(float4));
     for(unsigned e=0; e<g_trianglesNo; e++) {
 	pTrianglesIntersectionData[20*e+0]  = g_triangles[e]._center._x;
 	pTrianglesIntersectionData[20*e+1]  = g_triangles[e]._center._y;
@@ -215,11 +216,11 @@ int main(int argc, char *argv[])
 	pTrianglesIntersectionData[20*e+19] = g_triangles[e]._d3;
     }
     float *hipTriangleIntersectionData;
-    SAFE( hipMalloc((void**)&hipTriangleIntersectionData, g_trianglesNo*20*sizeof(float)) );
-    SAFE( hipMemcpy(hipTriangleIntersectionData, pTrianglesIntersectionData, g_trianglesNo*20*sizeof(float), hipMemcpyHostToDevice) );
+    SAFE(hipMalloc((void**)&hipTriangleIntersectionData, g_trianglesNo*5*sizeof(float4)));
+    SAFE(hipMemcpy(hipTriangleIntersectionData, pTrianglesIntersectionData, g_trianglesNo*5*sizeof(float4), hipMemcpyHostToDevice));
 
-    SAFE( hipMalloc((void**)&hipTriangles, g_trianglesNo*sizeof(Triangle)) );
-    SAFE( hipMemcpy(hipTriangles, g_triangles, g_trianglesNo*sizeof(Triangle), hipMemcpyHostToDevice) );
+    SAFE(hipMalloc((void**)&hipTriangles, g_trianglesNo*sizeof(Triangle)));
+    SAFE(hipMemcpy(hipTriangles, g_triangles, g_trianglesNo*sizeof(Triangle), hipMemcpyHostToDevice));
     setHipConstants();
 
     float angle1=0.0f;
@@ -542,10 +543,15 @@ int main(int argc, char *argv[])
     SAFE(hipFree(hipTriangles));
     SAFE(hipFree(hipTriangleIntersectionData));
     SAFE(hipFree(hipVertices));
-    // Clean up PBO and HIP resource
-    (void)hipGraphicsUnregisterResource(pboResource);
+    // Clean up PBO and HIP resource.
+    // Note: The malloc'd host buffers (pVerticesData, pTrianglesIntersectionData,
+    // pLimits, pIndexesOrTrilists, pMortonTable) are intentionally not freed here.
+    // At process exit, the OS reclaims all pages anyway, and the GPU driver
+    // (via hipDeviceReset or process termination) releases device resources.
+    // Adding explicit frees would just add noise and risk double-free bugs
+    // if early-exit paths are ever added.
+    SAFE(hipGraphicsUnregisterResource(pboResource));
     glDeleteBuffers(1, &pbo);
-    // Debug buffers freed (no longer used)
     destroy_texture(&tex);
 
     SAFE(hipDeviceSynchronize());

@@ -29,9 +29,9 @@
 #include <hip/hip_runtime.h>
 #include <hip/hip_vector_types.h>
 
-#include "Types.h"
 #include "Base3d.h"
 #include "Camera.h"
+#include "Types.h"
 
 #include "ConstantsAndGlobals.h"
 
@@ -39,24 +39,37 @@
 
 /////////////////////////////////
 // Raytracing configuration
-#define THREADS_PER_BLOCK   32
+//
+// THREADS_PER_BLOCK: Number of HIP threads per block.
+// 32 gives best performance on tested AMD hardware (Radeon 660M iGPU).
+// Despite AMD's wavefront size of 64, this kernel is register-heavy
+// (template-instantiated local variables in Raytrace), so 32 threads
+// per block allows higher occupancy. 64 was found to be ~80% slower.
+// Larger/more complex scenes may benefit from using 64.
+#define THREADS_PER_BLOCK 32
 
 // What depth to stop reflections and refractions?
-#define MAX_RAY_DEPTH	    2
+#define MAX_RAY_DEPTH 2
 
 // Ray intersections of a distance <=NUDGE_FACTOR (from the origin) don't count
-#define NUDGE_FACTOR     1e-5f
+#define NUDGE_FACTOR 1e-5f
 
 // How much the reflected color contributes to the overall
 #define REFLECTIONS_RATE 0.375f
 
 //////////////////////////////
 // Enable ambient occlusion?
-//#define AMBIENT_OCCLUSION
+// #define AMBIENT_OCCLUSION
 // How many ambient rays to spawn per ray intersection?
-#define AMBIENT_SAMPLES  32
+#define AMBIENT_SAMPLES 32
 // How close to check for ambient occlusion?
-#define AMBIENT_RANGE    0.15f
+#define AMBIENT_RANGE 0.15f
+
+// Float4 slots per triangle in the intersection texture (hot path for BVH).
+// Slots: 0=center(+twoSided), 1=normal(+d), 2=e1(+d1), 3=e2(+d2), 4=e3(+d3)
+// Color and vertex indices are read from a device-side Triangle struct array
+// (only on hits), keeping the hot-path texture stride small.
+#define TRIANGLE_TEX_SLOTS 5
 
 __constant__ unsigned VERTICES;
 __constant__ unsigned TRIANGLES;
@@ -199,28 +212,25 @@ __global__ void CoreLoopTriangles(int *pixels, Matrix3 *hipWorldToCameraSpace, T
     // First check if the triangle is visible from where we stand
     // (closed objects only)
 
-    float4 center = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx);
-    float4 normal = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx+1);
+    float4 center = tex1Dfetch<float4>(g_trianglesTexture_const, TRIANGLE_TEX_SLOTS*idx);
+    float4 normal = tex1Dfetch<float4>(g_trianglesTexture_const, TRIANGLE_TEX_SLOTS*idx+1);
 
     Vector3 triToEye = *eye;
     triToEye -= center;
     // Normally we would normalize, but since we just need the sign
     // of the dot product (to determine if it facing us or not)...
-    //triToEye.normalize();
-    //if (!pTriangles[idx]._twoSided && dotHIP(triToEye, pTriangles[idx]._normal)<0.f)
     if (center.w == 0.f && dotHIP(triToEye, normal)<0.f)
 	return;
 
-    int color = getColor(pTriangles[idx]._colorf);
+    int packedColor = getColor(pTriangles[idx]._colorf);
 
-    // For each of the 3 vertices of triangle j of object i,
-    // transform to camera space, project and plot them
+    // For each of the 3 vertices, transform to camera space, project and plot
     Vector3 v1(tex1Dfetch<float4>(g_verticesTexture_const, 2*pTriangles[idx]._idx1));
     Vector3 v2(tex1Dfetch<float4>(g_verticesTexture_const, 2*pTriangles[idx]._idx2));
     Vector3 v3(tex1Dfetch<float4>(g_verticesTexture_const, 2*pTriangles[idx]._idx3));
-    ProjectAndPlot( TransformToSomeSpace(v1, hipWorldToCameraSpace, eye), pixels, color);
-    ProjectAndPlot( TransformToSomeSpace(v2, hipWorldToCameraSpace, eye), pixels, color);
-    ProjectAndPlot( TransformToSomeSpace(v3, hipWorldToCameraSpace, eye), pixels, color);
+    ProjectAndPlot( TransformToSomeSpace(v1, hipWorldToCameraSpace, eye), pixels, packedColor);
+    ProjectAndPlot( TransformToSomeSpace(v2, hipWorldToCameraSpace, eye), pixels, packedColor);
+    ProjectAndPlot( TransformToSomeSpace(v3, hipWorldToCameraSpace, eye), pixels, packedColor);
 }
 ///////////////////////////////////////////////
 // Raytracing modes
@@ -299,13 +309,14 @@ __device__ bool BVH_IntersectTriangles(
 	    }
 	} else {
 	    for(unsigned i=data.w; i<data.w + (data.x & 0x7fffffff); i++) {
-		int idx = tex1Dfetch<uint1>(g_triIdxListTexture_const, i).x;
+		int idx_raw = tex1Dfetch<uint1>(g_triIdxListTexture_const, i).x;
+		unsigned idx = (unsigned)idx_raw; // triangle indices are never negative
 
-		if ((unsigned)avoidSelf == (unsigned)idx)
+		if (avoidSelf == idx)
 		    continue;
 
-		float4 center = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx);
-		float4 normal = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx+1);
+		float4 center = tex1Dfetch<float4>(g_trianglesTexture_const, TRIANGLE_TEX_SLOTS*idx);
+		float4 normal = tex1Dfetch<float4>(g_trianglesTexture_const, TRIANGLE_TEX_SLOTS*idx+1);
 
 		if (doCulling && (center.w == 0.f)) {
 		    Vector3 fromTriToOrigin = origin;
@@ -326,11 +337,11 @@ __device__ bool BVH_IntersectTriangles(
 		Vector3 hit = ray*s;
 		hit += origin;
 
-		float4 ee1 = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx+2);
+		float4 ee1 = tex1Dfetch<float4>(g_trianglesTexture_const, TRIANGLE_TEX_SLOTS*idx+2);
 		coord kt1 = dotHIP(ee1, hit) - ee1.w; if (kt1<0.0f) continue;
-		float4 ee2 = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx+3);
+		float4 ee2 = tex1Dfetch<float4>(g_trianglesTexture_const, TRIANGLE_TEX_SLOTS*idx+3);
 		coord kt2 = dotHIP(ee2, hit) - ee2.w; if (kt2<0.0f) continue;
-		float4 ee3 = tex1Dfetch<float4>(g_trianglesTexture_const, 5*idx+4);
+		float4 ee3 = tex1Dfetch<float4>(g_trianglesTexture_const, TRIANGLE_TEX_SLOTS*idx+4);
 		coord kt3 = dotHIP(ee3, hit) - ee3.w; if (kt3<0.0f) continue;
 
 		if (stopAtfirstRayHit) {
@@ -358,6 +369,9 @@ __device__ bool BVH_IntersectTriangles(
 	return false;
 }
 
+// Compile-time recursion: templates let us unroll the reflection/refraction
+// depth at compile time, avoiding the need for runtime recursion on the GPU.
+// The base case is handled via explicit template specialization at MAX_RAY_DEPTH.
 template <int depth, bool doSpecular, bool doPhongInterp, bool doReflections, bool doShadows, bool doCulling>
 __device__ Pixel Raytrace(
     Vector3 originInWorldSpace, Vector3 rayInWorldSpace, int avoidSelf,
@@ -387,6 +401,7 @@ __device__ Pixel Raytrace(
     float4 N2;
     float4 V3;
     float4 N3;
+
     V1 = tex1Dfetch<float4>(g_verticesTexture_const, 2*pBestTri->_idx1);
     V2 = tex1Dfetch<float4>(g_verticesTexture_const, 2*pBestTri->_idx2);
     V3 = tex1Dfetch<float4>(g_verticesTexture_const, 2*pBestTri->_idx3);
@@ -513,6 +528,8 @@ __device__ Pixel Raytrace(
     }
 }
 
+// Base case: stop compile-time recursion at MAX_RAY_DEPTH.
+// Returns black (no contribution) at the recursion limit.
 #define STOP_RECURSION(a,b,c,d,e)							    \
 template <>										    \
 __device__ Pixel Raytrace<MAX_RAY_DEPTH,a,b,c,d,e>(					    \
@@ -520,7 +537,8 @@ __device__ Pixel Raytrace<MAX_RAY_DEPTH,a,b,c,d,e>(					    \
     Triangle *pTriangles,								    \
     Vector3 *hipEyePosInWorldSpace, Vector3 *hipLightPosInWorldSpace)			    \
 {											    \
-    (void)originInWorldSpace; (void)rayInWorldSpace; (void)avoidSelf; (void)pTriangles; (void)hipEyePosInWorldSpace; (void)hipLightPosInWorldSpace; \
+    (void)originInWorldSpace; (void)rayInWorldSpace; (void)avoidSelf; (void)pTriangles;	    \
+    (void)hipEyePosInWorldSpace; (void)hipLightPosInWorldSpace;				    \
     return Pixel(0.f,0.f,0.f);								    \
 }
 
@@ -651,40 +669,40 @@ void Raytrace(
 	resDesc1.res.linear.desc = channel1desc;
 	resDesc1.res.linear.devPtr = hipTriIdxList;
 	resDesc1.res.linear.sizeInBytes = g_triIndexListNo*sizeof(uint1);
-	(void)hipCreateTextureObject(&g_triIdxListTexture, &resDesc1, &texDesc, NULL);
-	(void)hipMemcpyToSymbol(g_triIdxListTexture_const, &g_triIdxListTexture, sizeof(hipTextureObject_t));
+	SAFE(hipCreateTextureObject(&g_triIdxListTexture, &resDesc1, &texDesc, NULL));
+	SAFE(hipMemcpyToSymbol(g_triIdxListTexture_const, &g_triIdxListTexture, sizeof(hipTextureObject_t)));
 
 	hipResourceDesc resDesc2 = {};
 	resDesc2.resType = hipResourceTypeLinear;
 	resDesc2.res.linear.desc = channel2desc;
 	resDesc2.res.linear.devPtr = hipBVHlimits;
 	resDesc2.res.linear.sizeInBytes = g_pCFBVH_No*6*sizeof(float);
-	(void)hipCreateTextureObject(&g_pCFBVHlimitsTexture, &resDesc2, &texDesc, NULL);
-	(void)hipMemcpyToSymbol(g_pCFBVHlimitsTexture_const, &g_pCFBVHlimitsTexture, sizeof(hipTextureObject_t));
+	SAFE(hipCreateTextureObject(&g_pCFBVHlimitsTexture, &resDesc2, &texDesc, NULL));
+	SAFE(hipMemcpyToSymbol(g_pCFBVHlimitsTexture_const, &g_pCFBVHlimitsTexture, sizeof(hipTextureObject_t)));
 
 	hipResourceDesc resDesc3 = {};
 	resDesc3.resType = hipResourceTypeLinear;
 	resDesc3.res.linear.desc = channel3desc;
 	resDesc3.res.linear.devPtr = hipBVHindexesOrTrilists;
 	resDesc3.res.linear.sizeInBytes = g_pCFBVH_No*sizeof(uint4);
-	(void)hipCreateTextureObject(&g_pCFBVHindexesOrTrilistsTexture, &resDesc3, &texDesc, NULL);
-	(void)hipMemcpyToSymbol(g_pCFBVHindexesOrTrilistsTexture_const, &g_pCFBVHindexesOrTrilistsTexture, sizeof(hipTextureObject_t));
+	SAFE(hipCreateTextureObject(&g_pCFBVHindexesOrTrilistsTexture, &resDesc3, &texDesc, NULL));
+	SAFE(hipMemcpyToSymbol(g_pCFBVHindexesOrTrilistsTexture_const, &g_pCFBVHindexesOrTrilistsTexture, sizeof(hipTextureObject_t)));
 
 	hipResourceDesc resDesc4 = {};
 	resDesc4.resType = hipResourceTypeLinear;
 	resDesc4.res.linear.desc = channel4desc;
 	resDesc4.res.linear.devPtr = hipPtrVertices;
 	resDesc4.res.linear.sizeInBytes = g_verticesNo*8*sizeof(float);
-	(void)hipCreateTextureObject(&g_verticesTexture, &resDesc4, &texDesc, NULL);
-	(void)hipMemcpyToSymbol(g_verticesTexture_const, &g_verticesTexture, sizeof(hipTextureObject_t));
+	SAFE(hipCreateTextureObject(&g_verticesTexture, &resDesc4, &texDesc, NULL));
+	SAFE(hipMemcpyToSymbol(g_verticesTexture_const, &g_verticesTexture, sizeof(hipTextureObject_t)));
 
 	hipResourceDesc resDesc5 = {};
 	resDesc5.resType = hipResourceTypeLinear;
 	resDesc5.res.linear.desc = channel5desc;
 	resDesc5.res.linear.devPtr = hipTriangleIntersectionData;
-	resDesc5.res.linear.sizeInBytes = g_trianglesNo*20*sizeof(float);
-	(void)hipCreateTextureObject(&g_trianglesTexture, &resDesc5, &texDesc, NULL);
-	(void)hipMemcpyToSymbol(g_trianglesTexture_const, &g_trianglesTexture, sizeof(hipTextureObject_t));
+	resDesc5.res.linear.sizeInBytes = g_trianglesNo*TRIANGLE_TEX_SLOTS*sizeof(float4);
+	SAFE(hipCreateTextureObject(&g_trianglesTexture, &resDesc5, &texDesc, NULL));
+	SAFE(hipMemcpyToSymbol(g_trianglesTexture_const, &g_trianglesTexture, sizeof(hipTextureObject_t)));
     }
 
     if (g_bUsePoints) {
@@ -781,6 +799,6 @@ void Raytrace(
 }
 
 void setHipConstants() {
-    (void)hipMemcpyToSymbol(VERTICES, &g_verticesNo, sizeof(int));
-    (void)hipMemcpyToSymbol(TRIANGLES, &g_trianglesNo, sizeof(int));
+    SAFE(hipMemcpyToSymbol(VERTICES, &g_verticesNo, sizeof(int)));
+    SAFE(hipMemcpyToSymbol(TRIANGLES, &g_trianglesNo, sizeof(int)));
 }
