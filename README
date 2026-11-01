@@ -24,7 +24,7 @@ a backend:
     ./configure --enable-rocm
     ./configure --enable-sycl
 
-### Arch Linux dependencies
+### Dependencies
 
 For a SYCL build on Arch Linux (tested with Intel oneAPI 2026.0 on an
 Intel i5-1335U / UHD Graphics laptop):
