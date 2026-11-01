@@ -59,6 +59,13 @@ namespace enums {
 
 using namespace enums;
 
+// Read exactly 'bytes' bytes, or treat the file as malformed.
+static void readBytes(void *dst, size_t bytes, FILE *fp)
+{
+    if (fread(dst, 1, bytes, fp) != bytes)
+	panic("Malformed 3D file");
+}
+
 // Helper struct for lib3ds materials
 struct MaterialColors {
 
@@ -142,7 +149,7 @@ coord load_object(const char *filename)
 	    Uint32 totalPoints = 0;
 	    Uint32 magic;
 
-	    fread(&magic, 1, sizeof(Uint32), fp);
+	    readBytes(&magic, sizeof(magic), fp);
 	    if (magic != TRI_MAGIC && magic != TRI_MAGICNORMAL) {
 		// No magic, just vertices and points (no normals, no colors)
 		fseek(fp, 0, SEEK_SET);
@@ -154,14 +161,18 @@ coord load_object(const char *filename)
 	    unsigned currentTotalTris = 0;
 	    while(1) {
 		unsigned temp;
-		fread(&temp, 1, sizeof(Uint32), fp);
-		if (feof(fp))
-		    break;
+		if (fread(&temp, 1, sizeof(Uint32), fp) != sizeof(Uint32)) {
+		    if (feof(fp))
+			break;
+		    panic("Malformed 3D file");
+		}
 		currentTotalPoints += temp;
 		fseek(fp, temp*(magic==TRI_MAGICNORMAL?24:12), SEEK_CUR);
-		fread(&temp, 1, sizeof(Uint32), fp);
-		if (feof(fp))
-		    break;
+		if (fread(&temp, 1, sizeof(Uint32), fp) != sizeof(Uint32)) {
+		    if (feof(fp))
+			break;
+		    panic("Malformed 3D file");
+		}
 		currentTotalTris += temp;
 		fseek(fp, temp*24, SEEK_CUR);
 	    }
@@ -186,21 +197,23 @@ coord load_object(const char *filename)
 	    fseek(fp, currentOffset, SEEK_SET);
 	    do {
 		Uint32 noOfPoints;
-		fread(&noOfPoints, 1, sizeof(Uint32), fp);
-		if (feof(fp))
-		    break;
+		if (fread(&noOfPoints, 1, sizeof(Uint32), fp) != sizeof(Uint32)) {
+		    if (feof(fp))
+			break;
+		    panic("Malformed 3D file");
+		}
 
 		for(Uint32 i=0; i<noOfPoints; i++) {
 		    float x,y,z;
-		    fread(&x,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
-		    fread(&y,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
-		    fread(&z,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
+		    readBytes(&x, sizeof(x), fp);
+		    readBytes(&y, sizeof(y), fp);
+		    readBytes(&z, sizeof(z), fp);
 
 		    float nx=0.,ny=0.,nz=0.;
 		    if (magic == TRI_MAGICNORMAL) {
-			fread(&nx,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
-			fread(&ny,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
-			fread(&nz,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
+			readBytes(&nx, sizeof(nx), fp);
+			readBytes(&ny, sizeof(ny), fp);
+			readBytes(&nz, sizeof(nz), fp);
 		    } else {
 			nx = ny = nz = 0; // Will be calculated in fix_normals()
 		    }
@@ -215,23 +228,22 @@ coord load_object(const char *filename)
 		}
 
 		Uint32 noOfTris;
-		fread(&noOfTris, 1, sizeof(Uint32), fp);
-		if (feof(fp)) { panic("Malformed 3D file"); }
+		readBytes(&noOfTris, sizeof(noOfTris), fp);
 
 		for(Uint32 i=0; i<noOfTris; i++) {
 		    Uint32 idx1,idx2,idx3;
-		    fread(&idx1,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
-		    fread(&idx2,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
-		    fread(&idx3,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
+		    readBytes(&idx1, sizeof(idx1), fp);
+		    readBytes(&idx2, sizeof(idx2), fp);
+		    readBytes(&idx3, sizeof(idx3), fp);
 		    if (idx1>=(totalPoints+noOfPoints)) { panic("Malformed 3D file (idx1)"); }
 		    if (idx2>=(totalPoints+noOfPoints)) { panic("Malformed 3D file (idx2)"); }
 		    if (idx3>=(totalPoints+noOfPoints)) { panic("Malformed 3D file (idx3)"); }
 
 		    float r,g,b;
 		    if (magic == TRI_MAGIC || magic == TRI_MAGICNORMAL) {
-			fread(&r,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
-			fread(&g,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
-			fread(&b,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
+			readBytes(&r, sizeof(r), fp);
+			readBytes(&g, sizeof(g), fp);
+			readBytes(&b, sizeof(b), fp);
 			r*=255.; g*=255.; b*=255.;
 		    } else {
 			r = g = b = 255.0; // No colors? White, then... :-(
@@ -298,9 +310,9 @@ coord load_object(const char *filename)
 
 	    for(Uint32 i=0; i<g_verticesNo; i++) {
 		float x,y,z;
-		fread(&y,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
-		fread(&z,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
-		fread(&x,1,4,fp); if (feof(fp)) { panic("Malformed 3D file"); }
+		readBytes(&y, sizeof(y), fp);
+		readBytes(&z, sizeof(z), fp);
+		readBytes(&x, sizeof(x), fp);
 		float nx=0.,ny=0.,nz=0.;
 
 		pCurrentVertex->_x = x;

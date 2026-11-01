@@ -102,6 +102,9 @@ void ModeDescription()
 
 bool g_benchmark = false;
 
+// The modern CUDA/OpenGL interop object for the PBO
+cudaGraphicsResource *g_cudaPBO = NULL;
+
 int main(int argc, char *argv[])
 {
     bool bench = false;
@@ -157,7 +160,7 @@ int main(int argc, char *argv[])
 
     create_buffer(&buffer);
     create_texture(&tex);
-    SAFE( cudaGLRegisterBufferObject(buffer) ); // Tell CUDA about the PBO
+    SAFE( cudaGraphicsGLRegisterBuffer(&g_cudaPBO, buffer, cudaGraphicsRegisterFlagsWriteDiscard) ); // Tell CUDA about the PBO
 
     // Now, allocate the CUDA side of the data (in CUDA global memory,
     // in preparation for the textures that will store them...)
@@ -379,22 +382,40 @@ int main(int argc, char *argv[])
 	    }
 	    if (keys.isF4()) {
 		watch.reset(); framesDrawn = 1;
-		while (keys.isF4()) keys.poll(); g_bUsePoints       = !g_bUsePoints;       ModeDescription(); }
+		while (keys.isF4()) keys.poll();
+		g_bUsePoints       = !g_bUsePoints;
+		ModeDescription();
+	    }
 	    if (keys.isF5()) {
 		watch.reset(); framesDrawn = 1;
-		while (keys.isF5()) keys.poll(); g_bUseSpecular     = !g_bUseSpecular;     ModeDescription(); }
+		while (keys.isF5()) keys.poll();
+		g_bUseSpecular     = !g_bUseSpecular;
+		ModeDescription();
+	    }
 	    if (keys.isF6()) {
 		watch.reset(); framesDrawn = 1;
-		while (keys.isF6()) keys.poll(); g_bUsePhongInterp  = !g_bUsePhongInterp;  ModeDescription(); }
+		while (keys.isF6()) keys.poll();
+		g_bUsePhongInterp  = !g_bUsePhongInterp;
+		ModeDescription();
+	    }
 	    if (keys.isF7()) {
 		watch.reset(); framesDrawn = 1;
-		while (keys.isF7()) keys.poll(); g_bUseReflections  = !g_bUseReflections;  ModeDescription(); }
+		while (keys.isF7()) keys.poll();
+		g_bUseReflections  = !g_bUseReflections;
+		ModeDescription();
+	    }
 	    if (keys.isF8()) {
 		watch.reset(); framesDrawn = 1;
-		while (keys.isF8()) keys.poll(); g_bUseShadows      = !g_bUseShadows;      ModeDescription(); }
+		while (keys.isF8()) keys.poll();
+		g_bUseShadows      = !g_bUseShadows;
+		ModeDescription();
+	    }
 	    if (keys.isF9()) {
 		watch.reset(); framesDrawn = 1;
-		while (keys.isF9()) keys.poll(); g_bUseAntialiasing = !g_bUseAntialiasing; ModeDescription(); }
+		while (keys.isF9()) keys.poll();
+		g_bUseAntialiasing = !g_bUseAntialiasing;
+		ModeDescription();
+	    }
 
 	    if (keys.isS() || keys.isF() || keys.isE() || keys.isD()) {
 		Vector3 eyeToLookatPoint = lookat;
@@ -540,7 +561,7 @@ int main(int argc, char *argv[])
     SAFE(cudaFree(cudaTriangles));
     SAFE(cudaFree(cudaTriangleIntersectionData));
     SAFE(cudaFree(cudaVertices));
-    SAFE(cudaGLUnregisterBufferObject(buffer));
+    SAFE(cudaGraphicsUnregisterResource(g_cudaPBO));
     destroy_texture(&tex);
     destroy_buffer(&buffer);
 

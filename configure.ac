@@ -1,4 +1,4 @@
-AC_INIT([RealtimeRaytracer], [3.1], [ttsiodras@gmail.com])
+AC_INIT([RealtimeRaytracer], [3.2], [ttsiodras@gmail.com])
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([ac-macros])

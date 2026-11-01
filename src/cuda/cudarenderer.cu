@@ -77,6 +77,9 @@ cudaTextureObject_t g_pCFBVHindexesOrTrilistsTexture = 0;
 cudaTextureObject_t g_verticesTexture = 0;
 cudaTextureObject_t g_trianglesTexture = 0;
 
+// Set by main.cpp: the CUDA/OpenGL interop object for the PBO
+extern cudaGraphicsResource *g_cudaPBO;
+
 // Utility functions
 
 // CUDA dot product
@@ -939,7 +942,11 @@ void Raytrace(
 
     int *pixels;
     glBindTexture(GL_TEXTURE_2D, tex);
-    SAFE(cudaGLMapBufferObject((void**)&pixels, buffer));
+    SAFE(cudaGraphicsMapResources(1, &g_cudaPBO, 0));
+    void *mappedPtr = NULL;
+    size_t mappedSize = 0;
+    SAFE(cudaGraphicsResourceGetMappedPointer(&mappedPtr, &mappedSize, g_cudaPBO));
+    pixels = (int *)mappedPtr;
 
     if (g_bUsePoints) {
 	cudaMemset(pixels, 0x40, MAXX*MAXY*sizeof(unsigned)); // Clear all pixels to ambient
@@ -1042,7 +1049,7 @@ void Raytrace(
     }
 
     SAFE(cudaDeviceSynchronize());
-    SAFE(cudaGLUnmapBufferObject(buffer));
+    SAFE(cudaGraphicsUnmapResources(1, &g_cudaPBO, 0));
 
     // Use OpenGL texture to display the generated frame at lightning speed
     // (the PBO buffer is already on the card, no useless PCI bus criss-cross)
