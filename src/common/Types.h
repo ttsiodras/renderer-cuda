@@ -26,6 +26,38 @@
 
 #if defined(__HIPCC__)
 #include <hip/hip_vector_types.h>
+#elif defined(BACKEND_SYCL)
+//
+// Minimal CUDA-style vector types for the SYCL backend.
+// The renderer uses float4/float2/uint4/uint1 as plain, tightly packed
+// structures; the SYCL port reads them from ordinary USM buffers instead
+// of CUDA/HIP textures, so we only need layout-compatible structs.
+//
+struct float2 {
+    float x, y;
+    float2() = default;
+    constexpr float2(float x_, float y_) : x(x_), y(y_) {}
+};
+
+struct alignas(16) float4 {
+    float x, y, z, w;
+    float4() = default;
+    constexpr float4(float x_, float y_, float z_, float w_)
+	: x(x_), y(y_), z(z_), w(w_) {}
+};
+
+struct uint1 {
+    unsigned x;
+    uint1() = default;
+    constexpr uint1(unsigned x_) : x(x_) {}
+};
+
+struct alignas(16) uint4 {
+    unsigned x, y, z, w;
+    uint4() = default;
+    constexpr uint4(unsigned x_, unsigned y_, unsigned z_, unsigned w_)
+	: x(x_), y(y_), z(z_), w(w_) {}
+};
 #else
 #include <vector_types.h>
 #endif

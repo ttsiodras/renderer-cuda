@@ -14,6 +14,8 @@ dist-hook:
 	cp src/cuda/Makefile.* src/cuda/*cpp src/cuda/*cu $(distdir)/src/cuda/
 	mkdir -p $(distdir)/src/rocm_hip
 	cp src/rocm_hip/Makefile.* src/rocm_hip/*h src/rocm_hip/*pp $(distdir)/src/rocm_hip/
+	mkdir -p $(distdir)/src/sycl
+	cp src/sycl/Makefile.* src/sycl/*cpp src/sycl/*h $(distdir)/src/sycl/
 	mkdir -p $(distdir)/src/common
 	cp src/common/Makefile.am src/common/Makefile.in src/common/*cpp src/common/*h $(distdir)/src/common/
 

@@ -56,7 +56,10 @@
 #define DBG_PUTS(level, msg) \
     do { if (level <= DEBUG_LEVEL) { puts(msg); fflush(stdout); }} while (0)
 
-#ifdef HAVE_CUDA
+#if defined(BACKEND_SYCL)
+// SYCL backend: errors are reported via exceptions from the SYCL runtime.
+#define SAFE_NO_SYNC( call ) do { (void)(call); } while (0)
+#elif defined(HAVE_CUDA)
 #  define SAFE_NO_SYNC( call ) {                                     \
     cudaError_t err = call;                                                  \
     if( cudaSuccess != err) {                                               \
@@ -64,7 +67,7 @@
                 cudaGetErrorString(err), __FILE__, __LINE__ );                                   \
         exit(EXIT_FAILURE);                                                  \
     } }
-#else
+#elif defined(HAVE_HIP)
 #define SAFE_NO_SYNC( call ) {                                     \
     hipError_t err = call;                                          \
     if( hipSuccess != err) {                                         \
@@ -72,6 +75,8 @@
                 hipGetErrorString(err), __FILE__, __LINE__ );        \
         exit(EXIT_FAILURE);                                         \
     } }
+#else
+#define SAFE_NO_SYNC( call ) do { (void)(call); } while (0)
 #endif
 
 #  define SAFE( call )       SAFE_NO_SYNC(call);
@@ -111,6 +116,7 @@ DECLARE_DEFINE_GLOBAL(int*, g_triIndexList, NULL);
 DECLARE_DEFINE_GLOBAL(unsigned, g_pCFBVH_No, 0);
 DECLARE_DEFINE_GLOBAL(CacheFriendlyBVHNode*, g_pCFBVH, NULL);
 
+#if !defined(BACKEND_SYCL) && (defined(HAVE_CUDA) || defined(HAVE_HIP))
 void Raytrace(
     Matrix3 *pMv,
     Vertex *cudaPtrVertices, Triangle *cudaPtrTriangles, float *cudaTriangleIntersectionData,
@@ -119,3 +125,4 @@ void Raytrace(
     unsigned *cudaMortonTable);
 
 void setConstants();
+#endif

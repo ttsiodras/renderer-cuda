@@ -4,23 +4,45 @@
 
 This is a real-time raytracer, supporting .3ds, .ply (ascii) and .tri (binary) formats.
 
+*Updated, 2026/November: Added a SYCL backend, tested with Intel oneAPI 2026.0 on an Intel i5-1335U / UHD Graphics laptop. Thank you, Deepseek 4.1 Flash 1017 :-)*
+
 *Updated, 2026/April: Code now compiles and works with CUDA/13.0 and ROCm/HIP/7.2. Thank you, Qwen3.5 27B and GPT-OSS-120B :-)*
 
 ## Compilation
 
-The code has 3 dependencies: You must install...
+The code needs OpenGL (with GLEW and GLUT), libSDL (1.2 API; the SDL2
+compatibility layer works too), and one of the GPU toolchains:
 
-    - OpenGL with GLEW and GLUT (e.g. apt install libglew-dev )
-    - libSDL (e.g. apt install libsdl1.2-dev or libsdl2-dev )
+    - CUDA
+    - ROCm/HIP
+    - SYCL (Intel oneAPI DPC++)
 
-...and of course, the GPU parts. The build system auto-detects CUDA or ROCm/HIP.
-To explicitly enable ROCm/HIP: 
-
-    ./configure --enable-rocm 
-
-To force CUDA:
+The build system auto-detects CUDA, ROCm/HIP or SYCL. To explicitly select
+a backend:
 
     ./configure --enable-cuda
+    ./configure --enable-rocm
+    ./configure --enable-sycl
+
+### Arch Linux dependencies
+
+For a SYCL build on Arch Linux (tested with Intel oneAPI 2026.0 on an
+Intel i5-1335U / UHD Graphics laptop):
+
+    sudo pacman -S --needed base-devel glew freeglut sdl12-compat mesa \
+        intel-oneapi-dpcpp-cpp intel-oneapi-compiler-dpcpp-cpp-runtime \
+        intel-compute-runtime level-zero-loader ocl-icd
+
+`intel-oneapi-dpcpp-cpp` provides `icpx`/`dpcpp` and the SYCL headers;
+`intel-compute-runtime` provides the Intel Level Zero/OpenCL GPU driver;
+`level-zero-loader` and `ocl-icd` provide the loaders. The oneAPI runtime
+needs its libraries (in particular `libumf`) on the loader path, so source
+the oneAPI environment before running:
+
+    source /opt/intel/oneapi/setvars.sh
+
+For CUDA or ROCm builds, install your distro's CUDA or ROCm packages
+instead, plus the OpenGL/SDL packages above.
 
 After installing the dependencies, a simple...
 
@@ -29,6 +51,10 @@ After installing the dependencies, a simple...
 or...
 
     ./configure && make && ./src/rocm_hip/realtime_raytracer 3D-objects/chessboard.tri  
+
+or, for SYCL...
+
+    ./configure && make && ./src/sycl/realtime_raytracer 3D-objects/chessboard.tri
 
 ...will show you a real-time-raytraced rotating chessboard.
 
@@ -56,7 +82,7 @@ Use the following keys to navigate around the object:
 ## Misc
 
 Since it reports frame rate at the end, you can use this as a benchmark 
-for CUDA/AMD cards. Just spawn with "-b" to request benchmarking:
+for CUDA/AMD/Intel GPUs. Just spawn with "-b" to request benchmarking:
 (Note: keys don't work in benchmarking mode)
 
 For CUDA builds:
@@ -67,12 +93,21 @@ For ROCm/HIP builds:
 
     ./src/rocm_hip/realtime_raytracer -b 150 3D-objects/chessboard.tri
 
+For SYCL builds:
+
+    ./src/sycl/realtime_raytracer -b 150 3D-objects/chessboard.tri
+
 This will draw 150 frames and report speed back. 14 years ago (2012),
 my NVIDIA GT240 reported:
 
     Rendering 150 frames in 8.117 seconds. (18.4797 fps)
 
-Today, my laptop's (AMD Ryzen 5 7535HS with Radeon 660M Graphics)
-reports ~110 frames per second.
+My previous laptop (RIP, Asus S15, blown mosfet...) had an AMD Ryzen 5
+7535HS with Radeon 660M Graphics; and reported ~110 frames per second
+using ROCm.
 
-Clearly, times have changed - we need larger objects :-)
+I bought a second hand Thinkpad T14 Gen 4 to replace it; it has an Intel
+Core i5-1335U with UHD Graphics; and over SYCL/oneAPI it reports ~90 fps.
+
+Clearly, times have changed since I first built this!
+We need larger 3D objects :-)

@@ -1,15 +1,18 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define if the selected backend is SYCL */
+#undef BACKEND_SYCL
+
 /* Define to 1 if you have the 'atexit' function. */
 #undef HAVE_ATEXIT
 
-/* Define if CUDA backend is enabled */
+/* Define if CUDA backend is available */
 #undef HAVE_CUDA
 
 /* Define to 1 if you don't have 'vprintf' but do have '_doprnt.' */
 #undef HAVE_DOPRNT
 
-/* Define if HIP backend is enabled */
+/* Define if HIP backend is available */
 #undef HAVE_HIP
 
 /* Define to 1 if you have the <inttypes.h> header file. */
@@ -33,6 +36,9 @@
 
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
+
+/* Define if SYCL backend is available */
+#undef HAVE_SYCL
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H

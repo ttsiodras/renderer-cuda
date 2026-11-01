@@ -1,4 +1,4 @@
-AC_INIT([RealtimeRaytracer], [3.0], [ttsiodras@gmail.com])
+AC_INIT([RealtimeRaytracer], [3.1], [ttsiodras@gmail.com])
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([ac-macros])
@@ -56,11 +56,15 @@ AC_ARG_ENABLE([rocm],
   [AS_HELP_STRING([--enable-rocm],[build with ROCm/HIP (default auto-detect)])],
   [enable_rocm=$enableval],
   [enable_rocm=auto])
+AC_ARG_ENABLE([sycl],
+  [AS_HELP_STRING([--enable-sycl],[build with SYCL (default auto-detect)])],
+  [enable_sycl=$enableval],
+  [enable_sycl=auto])
 
 # Detect CUDA (if enabled)
 if test "x$enable_cuda" != "xno"; then
   AC_PATH_PROG([NVCC], [nvcc])
-  if test -n "$NVCC"; then
+  if test -n "$NVCC" && $NVCC --version >/dev/null 2>&1; then
     HAVE_CUDA=yes
   else
     HAVE_CUDA=no
@@ -72,7 +76,7 @@ fi
 # Detect HIP (ROCm) if enabled
 if test "x$enable_rocm" != "xno"; then
   AC_PATH_PROG([HIPCC], [hipcc])
-  if test -n "$HIPCC"; then
+  if test -n "$HIPCC" && $HIPCC --version >/dev/null 2>&1; then
     HAVE_HIP=yes
     # Basic flags; can be overridden by environment variables
     HIP_CFLAGS="-I$(dirname $HIPCC)/../include"
@@ -84,44 +88,103 @@ else
   HAVE_HIP=no
 fi
 
-# Determine which backend to use
-if test "x$enable_cuda" = "yes" && test "x$enable_rocm" = "yes"; then
-  AC_MSG_ERROR([Both --enable-cuda and --enable-rocm are set; please choose only one])
+# Detect SYCL (Intel oneAPI DPC++/icpx, or the dpcpp driver)
+SYCL_CFLAGS=""
+SYCL_LIBS="-lsycl"
+if test "x$enable_sycl" != "xno"; then
+  AC_PATH_PROGS([SYCLCXX], [icpx dpcpp], [])
+  if test -z "$SYCLCXX"; then
+    for d in /opt/intel/oneapi/compiler/latest/bin \
+             /opt/intel/oneapi/compiler/*/bin \
+             /opt/intel/oneapi/compiler/*/bin/compiler ; do
+      if test -x "$d/icpx"; then
+        SYCLCXX="$d/icpx"
+        break
+      fi
+      if test -x "$d/dpcpp"; then
+        SYCLCXX="$d/dpcpp"
+        break
+      fi
+    done
+  fi
+  if test -n "$SYCLCXX" && $SYCLCXX -fsycl -x c++ -fsyntax-only /dev/null >/dev/null 2>&1; then
+    HAVE_SYCL=yes
+  else
+    HAVE_SYCL=no
+  fi
+else
+  HAVE_SYCL=no
 fi
-if test "x$enable_cuda" = "yes"; then
+
+# Determine which backend to use
+requested_backends=0
+if test "x$enable_cuda" = "xyes"; then requested_backends=`expr $requested_backends + 1`; fi
+if test "x$enable_rocm" = "xyes"; then requested_backends=`expr $requested_backends + 1`; fi
+if test "x$enable_sycl" = "xyes"; then requested_backends=`expr $requested_backends + 1`; fi
+if test $requested_backends -gt 1; then
+  AC_MSG_ERROR([Only one of --enable-cuda, --enable-rocm and --enable-sycl may be used])
+fi
+
+if test "x$enable_cuda" = "xyes"; then
+  if test "$HAVE_CUDA" != "yes"; then
+    AC_MSG_ERROR([CUDA was explicitly requested, but no working nvcc was found])
+  fi
   BACKEND=cuda
-elif test "x$enable_rocm" = "yes"; then
+elif test "x$enable_rocm" = "xyes"; then
+  if test "$HAVE_HIP" != "yes"; then
+    AC_MSG_ERROR([ROCm/HIP was explicitly requested, but no working hipcc was found])
+  fi
   BACKEND=rocm
+elif test "x$enable_sycl" = "xyes"; then
+  if test "$HAVE_SYCL" != "yes"; then
+    AC_MSG_ERROR([SYCL was explicitly requested, but no working icpx/dpcpp was found])
+  fi
+  BACKEND=sycl
 else
   # Auto-detect
   if test "$HAVE_CUDA" = "yes"; then
     BACKEND=cuda
   elif test "$HAVE_HIP" = "yes"; then
     BACKEND=rocm
+  elif test "$HAVE_SYCL" = "yes"; then
+    BACKEND=sycl
   else
-    AC_MSG_ERROR([Neither CUDA nor ROCm/HIP toolchains were found. Use --enable-cuda or --enable-rocm])
+    AC_MSG_ERROR([Neither CUDA, ROCm/HIP nor SYCL toolchains were found. Use --enable-cuda, --enable-rocm or --enable-sycl])
   fi
 fi
 
 if test "$BACKEND" = "cuda"; then
   BACKEND_DIR=src/cuda
-else
+elif test "$BACKEND" = "rocm"; then
   BACKEND_DIR=src/rocm_hip
+else
+  BACKEND_DIR=src/sycl
 fi
 backend_dir=$BACKEND_DIR
 AC_SUBST([backend_dir])
 AC_SUBST([BACKEND])
+AC_SUBST([NVCC])
+AC_SUBST([NVCCFLAGS])
 AC_SUBST([HIPCC])
 AC_SUBST([HIP_CFLAGS])
 AC_SUBST([HIP_LIBS])
+AC_SUBST([SYCLCXX])
+AC_SUBST([SYCL_CFLAGS])
+AC_SUBST([SYCL_LIBS])
 
 
 # Define macros for backend presence
 if test "$HAVE_CUDA" = "yes"; then
-  AC_DEFINE([HAVE_CUDA], [1], [Define if CUDA backend is enabled])
+  AC_DEFINE([HAVE_CUDA], [1], [Define if CUDA backend is available])
 fi
 if test "$HAVE_HIP" = "yes"; then
-  AC_DEFINE([HAVE_HIP], [1], [Define if HIP backend is enabled])
+  AC_DEFINE([HAVE_HIP], [1], [Define if HIP backend is available])
+fi
+if test "$HAVE_SYCL" = "yes"; then
+  AC_DEFINE([HAVE_SYCL], [1], [Define if SYCL backend is available])
+fi
+if test "$BACKEND" = "sycl"; then
+  AC_DEFINE([BACKEND_SYCL], [1], [Define if the selected backend is SYCL])
 fi
 
 # Detect the canonical host and target build environment
@@ -266,11 +329,12 @@ AC_SUBST(SDL_CFLAGS)
 AC_SUBST(SDL_LIBS)
 
 # Finally create all the generated files
-AC_CONFIG_FILES([Makefile src/cuda/Makefile src/rocm_hip/Makefile src/common/Makefile])
+AC_CONFIG_FILES([Makefile src/cuda/Makefile src/rocm_hip/Makefile src/sycl/Makefile src/common/Makefile])
 AC_OUTPUT
 
 # Final summary printed after everything
 AC_MSG_NOTICE([backend configuration:])
 AC_MSG_NOTICE([  CUDA     : $HAVE_CUDA])
 AC_MSG_NOTICE([  HIP      : $HAVE_HIP])
+AC_MSG_NOTICE([  SYCL     : $HAVE_SYCL])
 AC_MSG_NOTICE([  selected : $BACKEND])
